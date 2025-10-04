@@ -1,7 +1,11 @@
 
 import json, math
 from pathlib import Path
-import pandas as pd
+# at the top of src/belief_network.py
+try:
+    import pandas as pd
+except ModuleNotFoundError:
+    pd = None
 import numpy as np
 
 class NaiveBayesBN:
