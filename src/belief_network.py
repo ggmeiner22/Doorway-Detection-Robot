@@ -1,59 +1,62 @@
-
-import json, math
+from __future__ import annotations
+import csv
 from pathlib import Path
-# at the top of src/belief_network.py
-try:
-    import pandas as pd
-except ModuleNotFoundError:
-    pd = None
-import numpy as np
+from typing import Dict, List
 
-class NaiveBayesBN:
-    def __init__(self, cpts_dir):
-        cpts = Path(cpts_dir)
-        self.prior = pd.read_csv(cpts/'prior_location.csv')
-        meta = json.loads((cpts/'meta.json').read_text())
-        self.locations = meta['locations']; self.features = meta['features']
-        self.cpts = {}
-        for feat in self.features:
-            df = pd.read_csv(cpts/f'cpt_{feat}.csv').set_index('location')
-            self.cpts[feat]=df
+def _load_prior(cpts_dir: Path) -> dict[str, float]:
+    prior = {}
+    with (cpts_dir / "prior_location.csv").open("r", newline="", encoding="utf-8") as f:
+        rdr = csv.DictReader(f)
+        for r in rdr:
+            prior[r["location"]] = float(r["p"])
+    return prior
 
-    def posterior_location(self, reading):
-        p = self.prior.set_index('location').loc[self.locations]['P(Location)'].values.astype(float)
-        logp = np.log(p + 1e-12)
-        for feat,val in reading.items():
-            if feat not in self.cpts: continue
-            table = self.cpts[feat]; col = str(val)
-            if col in table.columns:
-                cond = table[col].reindex(self.locations).fillna(1e-9).values
-            else:
-                cond = np.ones(len(self.locations))/len(self.locations)*1e-6
-            logp += np.log(cond + 1e-12)
-        logp -= logp.max(); p = np.exp(logp); p /= p.sum()
-        return p
+def _load_cpt(cpts_dir: Path, feature: str):
+    path = cpts_dir / f"cpt_{feature}.csv"
+    values = []
+    table = {}
+    with path.open("r", newline="", encoding="utf-8") as f:
+        rdr = csv.reader(f)
+        header = next(rdr)
+        locations = header[1:]
+        for row in rdr:
+            v = int(row[0])
+            values.append(v)
+            for i, loc in enumerate(locations):
+                table.setdefault(loc, {})[v] = float(row[1+i])
+    return locations, values, table
 
-def belief(sonar_readings, inner_configuration):
-    cpts_dir = inner_configuration.get('cpts_dir','cpts')
-    door_states = inner_configuration.get('door_states',['door_passed'])
-    bn = NaiveBayesBN(cpts_dir)
-    post = bn.posterior_location(sonar_readings)
-    p_door = float(sum(post[i] for i,l in enumerate(bn.locations) if l in door_states))
-    return {'locations': bn.locations, 'p_location': post.tolist(), 'p_door_passed': p_door}
+def _normalize(d: Dict[str, float]) -> Dict[str, float]:
+    s = sum(d.values())
+    if s <= 0:
+        n = len(d); return {k: 1.0/n for k in d}
+    return {k: v/s for k, v in d.items()}
 
-def door_passed_10cm_ago(history_beliefs, cm_per_step=1.0, door_states=('door_passed',)):
-    if not history_beliefs: return 0.0
-    k = int(round(10.0/max(1e-6, cm_per_step)))
-    idx = max(0, len(history_beliefs)-1-k)
-    b = history_beliefs[idx]
-    locs = b.get('locations',[]); probs = b.get('p_location',[])
-    return float(sum(probs[i] for i,l in enumerate(locs) if l in door_states))
+def belief(readings: Dict[str, int], inner_configuration: Dict) -> Dict[str, float]:
+    cpts_dir = Path(inner_configuration.get("cpts_dir", "cpts"))
+    door_states = set(inner_configuration.get("door_states", ["Door_Passed"]))
 
-if __name__=='__main__':
-    import argparse, json
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--cpts', default='cpts')
-    ap.add_argument('--readings', required=True)
-    a = ap.parse_args()
-    r = json.loads(a.readings)
-    print(json.dumps(belief(r, {'cpts_dir':a.cpts}), indent=2))
+    prior = _load_prior(cpts_dir)
+    post = dict(prior)
+
+    for feat, v in readings.items():
+        cpt_file = cpts_dir / f"cpt_{feat}.csv"
+        if not cpt_file.exists():
+            continue
+        locs, values, table = _load_cpt(cpts_dir, feat)
+        for loc in post:
+            post[loc] *= table.get(loc, {}).get(v, 1e-9)
+
+    post = _normalize(post)
+    p_door = sum(post.get(s, 0.0) for s in door_states)
+    return {"posterior": post, "p_door_passed": p_door}
+
+def door_passed_10cm_ago(history: List[Dict[str, float]], cm_per_step: float = 1.0, door_states=("Door_Passed",)):
+    steps = int(round(10.0 / max(cm_per_step, 1e-6)))
+    if len(history) <= steps:
+        return 0.0
+    idx = -steps
+    entry = history[idx]
+    if "posterior" in entry:
+        return sum(entry["posterior"].get(s, 0.0) for s in door_states)
+    return entry.get("p_door_passed", 0.0)
