@@ -1,6 +1,9 @@
 # Core numeric utils
 numpy>=1.24
 
+# data tools 
+pandas>=2.0
+
 # iRobot EDU SDK (import name: irobot_edu_sdk)
 irobot_edu_sdk
 
@@ -10,5 +13,3 @@ bleak>=0.22
 # Windows-only dependency used by Bleak (ignored on Linux/macOS)
 winsdk>=1.0.0b10 ; sys_platform == "win32"
 
-# Optional: uncomment if you add data tools later
-# pandas>=2.0
