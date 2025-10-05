@@ -74,20 +74,19 @@ Doorway_Detection-Robot/
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
-├── src
-│   ├── belief_network.py
-│   ├── collect.py
-│   ├── config.py
-│   ├── control.py
-│   ├── cpt_learn.py
-│   ├── data
-│   │   └── measurements_live.csv
-│   ├── __init__.py
-│   ├── pid.py
-│   ├── robot_io.py
-│   └── run_all_bt.py
-├── requirements.txt
-└── README.md
+└── src
+    ├── belief_network.py
+    ├── collect.py
+    ├── config.py
+    ├── control.py
+    ├── cpt_learn.py
+    ├── data
+    │   └── measurements_live.csv
+    ├── __init__.py
+    ├── pid.py
+    ├── robot_io.py
+    └── run_all_bt.py
+
 ```
 
 ---
