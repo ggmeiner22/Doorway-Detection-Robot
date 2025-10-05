@@ -16,8 +16,8 @@ FORWARD      = 10
 MAX_W, MIN_W = 21, 1
 
 # --- warm-up control + auto logging ---
-WARMUP_SECONDS = 90.0        # time to collect measurements while wall-following
-AUTO_K_RISE = 3.0            # sigma thresholds for door detection during warmup
+WARMUP_SECONDS = 9.0        # time to collect measurements while wall-following
+AUTO_K_RISE = 3.0           # sigma thresholds for door detection during warmup
 AUTO_K_FALL = 2.0
 AUTO_MIN_RISE_SAMPLES = 4
 AUTO_MIN_DOOR_SAMPLES = 5

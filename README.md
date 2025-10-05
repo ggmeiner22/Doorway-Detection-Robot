@@ -65,12 +65,12 @@ Doorway_Detection-Robot/
 ├── data
 │   └── measurements_v2.csv
 ├── docs
-│   ├── collectData.py   # Old groups work EVENTUALLY REMOVE
+│   ├── collectData.py        # Old groups work EVENTUALLY REMOVE
 │   ├── images
 │   │   ├── network.png
 │   │   ├── posterior_rep.png
 │   │   └── timeseries.png
-│   └── index.html
+│   └── index.html            # Project Website
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
@@ -96,10 +96,11 @@ Doorway_Detection-Robot/
 
 - Python 3.10+ (3.11 OK)
 - (Recommended) VS Code with **Python**, **Pylance**, and **Remote – WSL** extensions if you use WSL.
+  - Note: WSL does not support BLE
 
 ---
 
-## 1) Setup & Execution(venv + deps)
+## 1) Setup & Execution (venv + deps)
 
 ```bash
 cd Doorway-Detection-Robot
@@ -133,7 +134,7 @@ python -m src.run_all_bt
   | **Door_Passed** | 🟣 Magenta | Doorway just passed (one sample) |
 
 - It writes labeled rows to `data/measurements_live.csv`.
-- Runs for **`WARMUP_SECONDS`** (default = 90 s) unless changed in the config file.
+- Runs for **`WARMUP_SECONDS`** (default = 9 s) unless changed in the config file.
 
 ### C) Learn CPTs (Bayesian Network)
 - Trains from the just-collected measurements.  
