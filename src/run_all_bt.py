@@ -8,9 +8,8 @@ import time, threading
 from irobot_edu_sdk.robots import event
 from .config import DATA_CSV, CPTS_DIR, FEATURES, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES
 from .robot_io import get_robot
-from .collect import collect_auto
 from .cpt_learn import learn_cpts_from_csv
-from .control import run_controller
+from .control import warmup_autolog, run_controller
 
 robot = get_robot(ROBOT_NAME)
 _connected = False
@@ -23,8 +22,11 @@ async def _run(_r):
     _connected = True
     ensure_dirs()
 
-    # Phase 1: collect & label
-    await collect_auto(robot, data_csv=DATA_CSV, dt=DT)
+    # Phase 1: WALL-FOLLOW + AUTO-LOG (no keys)
+    await warmup_autolog(robot, data_csv=DATA_CSV)  # uses WARMUP_SECONDS from config
+
+    # Optional Phase 1: collect & label (farms lots of data w/o doing the BN control afterwards)
+    # await collect_auto(robot, data_csv=DATA_CSV, dt=DT)
 
     # Phase 2: learn CPTs
     learn_cpts_from_csv(DATA_CSV, CPTS_DIR, smoothing=1.0)

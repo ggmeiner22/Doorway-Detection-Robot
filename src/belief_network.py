@@ -49,7 +49,31 @@ def belief(readings: Dict[str, int], inner_configuration: Dict) -> Dict[str, flo
 
     post = _normalize(post)
     p_door = sum(post.get(s, 0.0) for s in door_states)
-    return {"posterior": post, "p_door_passed": p_door}
+    
+    # Loads the emission CPT file for one feature from cpts/
+    def _table(feat):
+        p = cpts_dir / f"cpt_{feat}.csv"
+        if not p.exists(): return [], {}
+        locs, values, tab = _load_cpt(cpts_dir, feat)
+        return values, tab
+    
+    bins1, tab1 = _table("IR1")
+    bins5, tab5 = _table("IR5")
+    support = bins1 or bins5
+    p_bin = {b: 0.0 for b in support}
+    for b in support:
+        like1 = sum(post.get(loc,0.0)*tab1.get(loc,{}).get(b,0.0) for loc in post) if bins1 else 0.0
+        like5 = sum(post.get(loc,0.0)*tab5.get(loc,{}).get(b,0.0) for loc in post) if bins5 else 0.0
+        p_bin[b] = (like1 + like5) / (2 if (bins1 and bins5) else 1)
+    Z = sum(p_bin.values()) or 1.0
+    p_distance_bins = {b: v/Z for b,v in p_bin.items()}
+    
+    return {
+        "posterior": post,
+        "p_door_passed": p_door,
+        "p_distance_bins": p_distance_bins
+    }
+
 
 def door_passed_10cm_ago(history: List[Dict[str, float]], cm_per_step: float = 1.0, door_states=("Door_Passed",)):
     steps = int(round(10.0 / max(cm_per_step, 1e-6)))

@@ -110,7 +110,6 @@ python -m pip install -r requirements.txt
 
 # To execute
 python -m src.run_all_bt
-
 ```
 
 ---
@@ -121,8 +120,61 @@ python -m src.run_all_bt
 - The console prints “searching…” until the Create 3 connects over Bluetooth.
 - As soon as it’s connected you’ll see “Connected to …” and Phase 1 begins.
 
- 
-## 3) License
+### B) Warm-up wall-following + auto-logging
+- **Immediately starts** PID wall-following at **≈ 60 cm** from the right wall.  
+- **Drives forward** at a slow speed; gently steers to hold the setpoint.  
+- Every ~0.1 s it reads the right IR sensor, converts to distance, and **auto-labels** using the trend:
+
+  | Condition | LED Color | Meaning |
+  |------------|------------|----------|
+  | **Wall** | 🟢 Green | Normal wall-follow distance |
+  | **Door_Start** | 🟡 Yellow | Sustained rise → possible doorway start |
+  | **Door** | 🔵 Blue | Open region detected |
+  | **Door_Passed** | 🟣 Magenta | Doorway just passed (one sample) |
+
+- It writes labeled rows to `data/measurements_live.csv`.
+- Runs for **`WARMUP_SECONDS`** (default = 90 s) unless changed in the config file.
+
+### C) Learn CPTs (Bayesian Network)
+- Trains from the just-collected measurements.  
+- **Writes:**
+  - `cpts/prior_location.csv`
+  - `cpts/cpt_IR1.csv`, `cpts/cpt_IR5.csv`
+- These are **Excel-friendly CSVs** for easy visualization or analysis.
+
+### D) BN-assisted wall-following (live inference)
+- Continues **PID wall-following** after training.
+- Each control cycle:
+
+  - Computes **belief** over `Location`  
+    *(Wall / Door_Start / Door / Door_Passed)*.
+  - Computes **P(door just passed 10 cm ago)** by looking ~10 samples back.
+  - Computes **distance-from-wall distribution** over 10 cm bins  
+    (`p_distance_bins`).
+
+- **Behavior rule:**
+  - If `door_now` or `door_10cm_ago` > 0.6 → LED 🟣 **magenta**, **slow down briefly**.
+  - Otherwise → LED 🟢 **green**, continue at normal speed.
+
+- Console prints distance, bins, door probabilities, and wheel speeds continuously.
+
+---
+
+## 3) Files you will see
+`data/measurements_live.csv` — auto-labeled training data from warm-up.
+
+`cpts/*.csv` — learned BN tables used by control.
+
+---
+
+## 4) Stop / rerun
+**Ctrl+C** to stop.
+
+On later runs, you can skip warm-up and reuse CPTs (if you enable that setting); otherwise it will re-collect and retrain.
+
+---
+
+## 5) License
 
 This project is released under the **MIT License**.  
 
