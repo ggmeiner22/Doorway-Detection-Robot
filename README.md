@@ -15,8 +15,8 @@ The repo also includes a small demo that produces plots and a CSV you can open i
 ```text
 Doorway_Detection-Robot/
 ├── cpts
-│   ├── cpt_IR1.csv
-│   ├── cpt_IR6.csv
+│   ├── cpt_IR1.csv          # backup / symmetry feature
+│   ├── cpt_IR5.csv          # distance estimation (right sensor)
 │   └── prior_location.csv
 ├── data
 │   └── measurements_v2.csv
