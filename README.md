@@ -15,52 +15,8 @@ The repo also includes a small demo that produces plots and a CSV you can open i
 ```text
 Doorway_Detection-Robot/
 ├── cpts
-│   ├── cpt_BI1.csv
-│   ├── cpt_BI2.csv
-│   ├── cpt_BI3.csv
-│   ├── cpt_BI4.csv
-│   ├── cpt_BI5.csv
-│   ├── cpt_BI6.csv
-│   ├── cpt_BI7.csv
-│   ├── cpt_BI8.csv
-│   ├── cpt_BI9.csv
 │   ├── cpt_IR1.csv
-│   ├── cpt_IR2.csv
-│   ├── cpt_IR3.csv
-│   ├── cpt_IR4.csv
-│   ├── cpt_IR5.csv
 │   ├── cpt_IR6.csv
-│   ├── cpt_IR7.csv
-│   ├── cpt_IR8.csv
-│   ├── cpt_IR9.csv
-│   ├── cpt_PIDD1.csv
-│   ├── cpt_PIDD2.csv
-│   ├── cpt_PIDD3.csv
-│   ├── cpt_PIDD4.csv
-│   ├── cpt_PIDD5.csv
-│   ├── cpt_PIDD6.csv
-│   ├── cpt_PIDD7.csv
-│   ├── cpt_PIDD8.csv
-│   ├── cpt_PIDD9.csv
-│   ├── cpt_PIDI1.csv
-│   ├── cpt_PIDI2.csv
-│   ├── cpt_PIDI3.csv
-│   ├── cpt_PIDI4.csv
-│   ├── cpt_PIDI5.csv
-│   ├── cpt_PIDI6.csv
-│   ├── cpt_PIDI7.csv
-│   ├── cpt_PIDI8.csv
-│   ├── cpt_PIDI9.csv
-│   ├── cpt_PIDP1.csv
-│   ├── cpt_PIDP2.csv
-│   ├── cpt_PIDP3.csv
-│   ├── cpt_PIDP4.csv
-│   ├── cpt_PIDP5.csv
-│   ├── cpt_PIDP6.csv
-│   ├── cpt_PIDP7.csv
-│   ├── cpt_PIDP8.csv
-│   ├── cpt_PIDP9.csv
-│   ├── meta.json
 │   └── prior_location.csv
 ├── data
 │   └── measurements_v2.csv
