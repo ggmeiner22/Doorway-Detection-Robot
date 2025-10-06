@@ -11,5 +11,5 @@ irobot_edu_sdk
 bleak>=0.22
 
 # Windows-only dependency used by Bleak (ignored on Linux/macOS)
-winsdk>=1.0.0b10 ; sys_platform == "win32"
+#winsdk>=1.0.0b10 ; sys_platform == "win32"
 

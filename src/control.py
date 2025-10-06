@@ -20,18 +20,19 @@ def _cm_to_bin10(cm): return int(max(0, min(9, cm // 10)))
 
 # warm-up that wall-follows and auto-labels to CSV ---
 async def warmup_autolog(robot: Create3, *, data_csv, seconds: float = WARMUP_SECONDS, dt: float = DT):
+    print(1)
     new_file = not data_csv.exists()
     f = data_csv.open("a", newline="", encoding="utf-8")
     w = csv.writer(f)
+    print(2)
     if new_file:
         w.writerow(["location", "IR1", "IR5"])
-
+    print(3)
     # PID for wall-follow
-    from .pid import PID
     controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=SETPOINT_CM)
     await robot.set_lights_on_rgb(0,255,0)
     await robot.set_wheel_speeds(FORWARD, FORWARD)
-
+    print(4)
     # FSM stats for door detection on IR distance
     base = None; var = 25.0
     state = "Wall"; rise_cnt = 0; door_cnt = 0; refractory = 0
