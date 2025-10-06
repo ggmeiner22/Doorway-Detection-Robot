@@ -44,7 +44,6 @@ Doorway_Detection-Robot/
     ├── run_all_bt.py
     └── tests/
           └── test_drive.py
-
 ```
 
 ---
