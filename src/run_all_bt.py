@@ -6,20 +6,22 @@ Run with:
 """
 import time, threading
 from irobot_edu_sdk.robots import event
+from irobot_edu_sdk.music import Note
+from irobot_edu_sdk.backend.bluetooth import Bluetooth
+from irobot_edu_sdk.robots import Create3
 from .config import DATA_CSV, CPTS_DIR, FEATURES, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES
 from .robot_io import get_robot
 from .cpt_learn import learn_cpts_from_csv
 from .control import warmup_autolog, run_controller
 
-robot = get_robot(ROBOT_NAME)
-_connected = False
+robot = Create3(Bluetooth())
 print("[run] Using event-driven SDK loop")
 
 @event(robot.when_play)
-async def _run(_r):
-    global _connected
+async def play(robot):
+    await robot.set_lights_on_rgb(30, 255, 100)
+    await robot.play_note(Note.A5, .5)
     print(f"[run] Connected to {ROBOT_NAME}")
-    _connected = True
     ensure_dirs()
 
     # Phase 1: WALL-FOLLOW + AUTO-LOG (no keys)
@@ -34,10 +36,5 @@ async def _run(_r):
     # Phase 3: control with BN belief
     await run_controller(robot, cpts_dir=CPTS_DIR, door_states=DOOR_STATES, dt=DT)
 
-if __name__ == "__main__":
-    def heartbeat():
-        while not _connected:
-            print("[run] searching… (ensure robot is on, paired, and name/MAC matches)")
-            time.sleep(2)
-    threading.Thread(target=heartbeat, daemon=True).start()
-    robot.play()
+
+robot.play()

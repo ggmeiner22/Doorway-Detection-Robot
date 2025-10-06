@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio
+import asyncio, csv, time
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
 from .robot_io import prox_to_cm, cm_to_bin10
@@ -18,9 +18,8 @@ def _prox_to_cm(raw):
 
 def _cm_to_bin10(cm): return int(max(0, min(9, cm // 10)))
 
-# --- NEW: warm-up that wall-follows and auto-labels to CSV ---
+# warm-up that wall-follows and auto-labels to CSV ---
 async def warmup_autolog(robot: Create3, *, data_csv, seconds: float = WARMUP_SECONDS, dt: float = DT):
-    import csv, time
     new_file = not data_csv.exists()
     f = data_csv.open("a", newline="", encoding="utf-8")
     w = csv.writer(f)
