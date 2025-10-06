@@ -14,15 +14,15 @@ The repo also includes a small demo that produces plots and a CSV you can open i
 
 ```text
 Doorway_Detection-Robot/
-├── cpts
+├── cpts/
 │   ├── cpt_IR1.csv          # backup / symmetry feature
 │   ├── cpt_IR5.csv          # distance estimation (right sensor)
 │   └── prior_location.csv
-├── data
+├── data/
 │   └── measurements_v2.csv
-├── docs
+├── docs/
 │   ├── collectData.py        # Old groups work EVENTUALLY REMOVE
-│   ├── images
+│   ├── images/
 │   │   ├── network.png
 │   │   ├── posterior_rep.png
 │   │   └── timeseries.png
@@ -30,7 +30,7 @@ Doorway_Detection-Robot/
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
-└── src
+└── src/
     ├── belief_network.py
     ├── collect.py
     ├── config.py
@@ -41,7 +41,9 @@ Doorway_Detection-Robot/
     ├── __init__.py
     ├── pid.py
     ├── robot_io.py
-    └── run_all_bt.py
+    ├── run_all_bt.py
+    └── tests/
+          └── test_drive.py
 
 ```
 
