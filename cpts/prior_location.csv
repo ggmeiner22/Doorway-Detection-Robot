@@ -1,5 +1,5 @@
 location,p
-Wall,0.8695652173913043
-Door_Start,0.043478260869565216
-Door,0.043478260869565216
-Door_Passed,0.043478260869565216
+Wall,0.94
+Door_Start,0.02
+Door,0.02
+Door_Passed,0.02
