@@ -5,7 +5,11 @@ ROOT         = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
 DATA_CSV     = PROJECT_ROOT / "data" / "measurements_live.csv"
 CPTS_DIR     = PROJECT_ROOT / "cpts"
-FEATURES     = ["IR1", "IR5"]
+FEATURES     = [f"IR{i}" for i in range(1, 10)] + \
+             [f"PIDP{i}" for i in range(1, 10)] + \
+             [f"PIDD{i}" for i in range(1, 10)] + \
+             [f"PIDI{i}" for i in range(1, 10)] + \
+             [f"BI{i}" for i in range(1, 10)]
 LOCATIONS    = ["Wall","Door_Start","Door","Door_Passed"]
 DOOR_STATES  = ["Door_Passed"]
 
