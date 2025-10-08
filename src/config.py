@@ -3,7 +3,7 @@ import os
 
 ROOT         = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
-DATA_CSV     = PROJECT_ROOT / "data" / "measurements_live.csv"
+DATA_CSV     = PROJECT_ROOT / "data" / "synthetic_measurements.csv"
 CPTS_DIR     = PROJECT_ROOT / "cpts"
 FEATURES     = [f"IR{i}" for i in range(1, 10)] + \
              [f"PIDP{i}" for i in range(1, 10)] + \
