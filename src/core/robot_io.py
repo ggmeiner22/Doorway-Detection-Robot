@@ -3,17 +3,8 @@ import os, asyncio
 from typing import Optional
 import numpy as np
 from scipy.optimize import curve_fit
-
-try:
-    from irobot_edu_sdk.backend.bluetooth import Bluetooth
-    from irobot_edu_sdk.robots import Create3
-except ModuleNotFoundError as e:
-    raise SystemExit(
-        "Missing dependency: irobot_edu_sdk.\n"
-        "Windows:  python -m pip install irobot_edu_sdk bleak winsdk numpy scipy\n"
-        "Linux:    python -m pip install irobot_edu_sdk bleak numpy scipy\n"
-        "WSL is not supported for BLE."
-    ) from e
+from irobot_edu_sdk.backend.bluetooth import Bluetooth
+from irobot_edu_sdk.robots import Create3
 
 def get_robot(target_name_or_mac: Optional[str]) -> Create3:
     """Return a connected Create3 using Bluetooth backend."""
