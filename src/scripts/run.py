@@ -9,8 +9,8 @@ from irobot_edu_sdk.robots import event
 from irobot_edu_sdk.music import Note
 from irobot_edu_sdk.backend.bluetooth import Bluetooth
 from irobot_edu_sdk.robots import Create3
-from .config import CPTS_DIR, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES
-from .control import run_controller
+from core.config import CPTS_DIR, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES
+from core.control import run_controller
 
 robot = Create3(Bluetooth())
 print("[run] Using event-driven SDK loop")

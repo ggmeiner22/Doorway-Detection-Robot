@@ -1,8 +1,8 @@
 from __future__ import annotations
 import csv, asyncio
 from irobot_edu_sdk.robots import Create3
-from .robot_io import prox_to_cm, cm_to_bin10
-from .config import RIGHT_IR_IDX, DT, FEATURES
+from core.robot_io import prox_to_cm, cm_to_bin10
+from core.config import RIGHT_IR_IDX, DT, FEATURES
 
 current_label = "Wall"
 quit_collect  = False

@@ -1,10 +1,10 @@
 from __future__ import annotations
 import asyncio
 from irobot_edu_sdk.robots import Create3
-from .pid import PID
-from .robot_io import prox_to_cm, cm_to_bin10
-from .belief_network import belief, door_passed_10cm_ago
-from .config import (
+from core.pid import PID
+from core.robot_io import prox_to_cm, cm_to_bin10
+from core.belief_network import belief, door_passed_10cm_ago
+from core.config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, RIGHT_IR_IDX,
     DOOR_STATES, CPTS_DIR
 )
