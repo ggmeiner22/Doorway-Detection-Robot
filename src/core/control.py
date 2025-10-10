@@ -95,8 +95,20 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
                 print("Please enter a label for the current location: (w)all, (s)tart, (d)oor, (p)assed:")
-                label_shortcut = input()
+                label_shortcut = None
+                while label_shortcut is None:
+                    if keyboard.is_pressed('w'):
+                        label_shortcut = 'w'
+                    elif keyboard.is_pressed('s'):
+                        label_shortcut = 's'
+                    elif keyboard.is_pressed('d'):
+                        label_shortcut = 'd'
+                    elif keyboard.is_pressed('p'):
+                        label_shortcut = 'p'
+                    await asyncio.sleep(0.05) # prevent busy-waiting
+
                 label = label_map.get(label_shortcut, "Wall")
+                print(f"  Labelled as: {label}")
                 distance_since_last_prompt = 0
 
             # Write to CSV
