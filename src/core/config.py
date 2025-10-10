@@ -14,9 +14,13 @@ LOCATIONS    = ["Wall","Door_Start","Door","Door_Passed"]
 DOOR_STATES  = ["Door_Passed"]
 
 RIGHT_IR_IDX  = 6
+LEFT_IR_IDX   = 0
+WALL_SIDE     = 'right'  # 'left' or 'right'
+IR_SENSOR_IDX = RIGHT_IR_IDX if WALL_SIDE == 'right' else LEFT_IR_IDX
+
 HZ            = 10.0
 DT            = 1.0 / HZ
-SETPOINT_CM   = 60.0
+SETPOINT_CM   = 6.0
 FORWARD       = 10
 MAX_W, MIN_W  = 21, 1
 

@@ -6,7 +6,7 @@ from .pid import PID
 from .robot_io import prox_to_cm, cm_to_bin10, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins
 from .belief_network import belief, door_passed_10cm_ago
 from .config import (
-    DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, RIGHT_IR_IDX,
+    DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, IR_SENSOR_IDX, WALL_SIDE,
     DOOR_STATES, CPTS_DIR, FEATURES, WARMUP_SECONDS,
     AUTO_K_RISE, AUTO_K_FALL, AUTO_MIN_RISE_SAMPLES, AUTO_MIN_DOOR_SAMPLES,
     AUTO_REFRACTORY_STEPS, AUTO_EWMA_ALPHA, AUTO_EWVAR_ALPHA
@@ -56,14 +56,18 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 await asyncio.sleep(dt)
                 continue
 
-            d1 = prox_to_cm(pm1.sensors[RIGHT_IR_IDX])
-            d2 = prox_to_cm(pm2.sensors[RIGHT_IR_IDX])
+            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
+            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
             
             # Update PID
             u = controller.update(measurement=dist_cm, dt=dt)
-            L = max(min(forward - (u*.01), max_w), min_w)
-            R = max(min(forward + (u*.01), max_w), min_w)
+            if WALL_SIDE == 'right':
+                L = max(min(forward + u, max_w), min_w)
+                R = max(min(forward - u, max_w), min_w)
+            else:  # left
+                L = max(min(forward - u, max_w), min_w)
+                R = max(min(forward + u, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
             # Update history
@@ -121,17 +125,21 @@ async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = D
             pm1 = await robot.get_ir_proximity()
             if pm1 is None or pm1.sensors is None:
                 await asyncio.sleep(dt); continue
-            d1 = prox_to_cm(pm1.sensors[RIGHT_IR_IDX])
+            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
             await asyncio.sleep(0.02)
             pm2 = await robot.get_ir_proximity()
             if pm2 is None or pm2.sensors is None:
                 await asyncio.sleep(dt); continue
-            d2 = prox_to_cm(pm2.sensors[RIGHT_IR_IDX])
+            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
 
             u = controller.update(measurement=dist_cm, dt=dt)
-            L = max(min(forward + u, max_w), min_w)
-            R = max(min(forward - u, max_w), min_w)
+            if WALL_SIDE == 'right':
+                L = max(min(forward + u, max_w), min_w)
+                R = max(min(forward - u, max_w), min_w)
+            else:  # left
+                L = max(min(forward - u, max_w), min_w)
+                R = max(min(forward + u, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
             reading = {"IR1": cm_to_bin10(dist_cm), "IR5": cm_to_bin10(dist_cm)}
