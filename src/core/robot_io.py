@@ -24,10 +24,10 @@ def prox_to_cm(sensor_reading: float) -> float:
     if sensor_reading > 0:
         distance = A + B * np.log(sensor_reading)
         if np.isinf(distance) or np.isnan(distance):
-            return 999.0
-        return round(distance, 2)
+            return 50.0
+        return min(round(distance, 2), 50.0)
     else:
-        return 999.0
+        return 50.0
 
 def cm_to_bin10(cm: float) -> int:
     return int(max(0, min(9, cm // 10)))
