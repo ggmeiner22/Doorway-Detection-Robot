@@ -62,11 +62,11 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             
             u = controller.update(measurement=dist_cm, dt=dt)
             if WALL_SIDE == 'right':
-                L = max(min(forward + u * 0.01, max_w), min_w)
-                R = max(min(forward - u * 0.01, max_w), min_w)
+                L = max(min(forward + u * 0.1, max_w), min_w)
+                R = max(min(forward - u * 0.1, max_w), min_w)
             else:  # left
-                L = max(min(forward - u * 0.01, max_w), min_w)
-                R = max(min(forward + u * 0.01, max_w), min_w)
+                L = max(min(forward - u * 0.1, max_w), min_w)
+                R = max(min(forward + u * 0.1, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
             # Update history
@@ -135,11 +135,11 @@ async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = D
 
             u = controller.update(measurement=dist_cm, dt=dt)
             if WALL_SIDE == 'right':
-                L = max(min(forward + u * 0.01, max_w), min_w)
-                R = max(min(forward - u * 0.01, max_w), min_w)
+                L = max(min(forward + u * 0.1, max_w), min_w)
+                R = max(min(forward - u * 0.1, max_w), min_w)
             else:  # left
-                L = max(min(forward - u * 0.01, max_w), min_w)
-                R = max(min(forward + u * 0.01, max_w), min_w)
+                L = max(min(forward - u * 0.1, max_w), min_w)
+                R = max(min(forward + u * 0.1, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
             reading = {"IR1": cm_to_bin10(dist_cm), "IR5": cm_to_bin10(dist_cm)}
