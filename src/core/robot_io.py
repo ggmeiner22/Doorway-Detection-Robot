@@ -29,8 +29,9 @@ def prox_to_cm(sensor_reading: float) -> float:
     else:
         return 50.0
 
-def cm_to_bin10(cm: float) -> int:
-    return int(max(0, min(9, cm // 10)))
+def cm_to_bin12(cm: float) -> int:
+    """Discretizes a distance in cm into 12 bins (0-11) of 1cm each."""
+    return int(max(0, min(11, cm)))
 
 def discretize_p_10_bins(measurement: float, setpoint: float) -> int:
     if setpoint <= 0:

@@ -3,7 +3,7 @@ import asyncio, csv, time
 from collections import deque
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
-from .robot_io import prox_to_cm, cm_to_bin10, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins
+from .robot_io import prox_to_cm, cm_to_bin12, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins
 from .belief_network import belief, door_passed_10cm_ago
 from .config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, IR_SENSOR_IDX, WALL_SIDE,
@@ -70,7 +70,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             await robot.set_wheel_speeds(L, R)
 
             # Update history
-            ir_history.append(cm_to_bin10(dist_cm))
+            ir_history.append(cm_to_bin12(dist_cm))
             # P term
             p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
             pid_p_history.append(p_binned)
@@ -87,7 +87,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             bumper_history.append(any(bumpers))
 
             # Manual annotation
-            distance_since_last_prompt += ((pos.x - last_pos.x)**2 + (pos.y - last_pos.y)**2)**0.5
+            distance_since_last_prompt += (((pos.x - last_pos.x)**2 + (pos.y - last_pos.y)**2)**0.5) * 100
             last_pos = pos
 
             label = "Wall"

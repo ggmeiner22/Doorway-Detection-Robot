@@ -8,7 +8,7 @@ def get_possible_values():
     values = {}
     for f in FEATURES:
         if f.startswith("IR"):
-            values[f] = list(range(10))
+            values[f] = list(range(12))
         elif f.startswith("PIDP") or f.startswith("PIDI") or f.startswith("PIDD"):
             values[f] = list(range(10))
         elif f.startswith("BI"):
