@@ -49,7 +49,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             pm1 = await robot.get_ir_proximity()
             await asyncio.sleep(0.05)
             pm2 = await robot.get_ir_proximity()
-            bumpers = await robot.get_bumps()
+            bumpers = await robot.get_bumpers()
             pos = await robot.get_position()
 
             if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pos is None or last_pos is None:
