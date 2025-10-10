@@ -1,5 +1,5 @@
 location,p
-Wall,0.25
-Door_Start,0.25
-Door,0.25
-Door_Passed,0.25
+Wall,0.4
+Door_Start,0.2
+Door,0.2
+Door_Passed,0.2

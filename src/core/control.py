@@ -3,7 +3,7 @@ import asyncio, csv, time
 from collections import deque
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
-from .robot_io import prox_to_cm, cm_to_bin10
+from .robot_io import prox_to_cm, cm_to_bin10, discretize_p, discretize_i, discretize_d
 from .belief_network import belief, door_passed_10cm_ago
 from .config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, RIGHT_IR_IDX,
@@ -68,9 +68,19 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
 
             # Update history
             ir_history.append(cm_to_bin10(dist_cm))
-            pid_p_history.append(controller.kp * controller._prev)
-            pid_i_history.append(controller.ki * controller._integ)
-            pid_d_history.append(controller.kd * (controller._prev - controller._prev_prev) / dt if controller._prev_prev is not None else 0.0)
+            # P term
+            p_binned = discretize_p(dist_cm, setpoint_cm)
+            pid_p_history.append(p_binned)
+            # I term
+            i_val = controller._integ
+            i_binned = discretize_i(i_val, setpoint_cm)
+            pid_i_history.append(i_binned)
+            # D term
+            d_val = 0.0
+            if controller._prev is not None and controller._prev_prev is not None:
+                d_val = (controller._prev - controller._prev_prev) / dt
+            d_binned = discretize_d(d_val, setpoint_cm)
+            pid_d_history.append(d_binned)
             bumper_history.append(any(bumpers))
 
             # Manual annotation
