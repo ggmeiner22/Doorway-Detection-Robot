@@ -63,7 +63,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             # Update PID
             u = controller.update(measurement=dist_cm, dt=dt)
             L = max(min(forward + u, max_w), min_w)
-            R = max(min(forward - u, max_w), min_w)
+            R = max(min(forward + u, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
             # Update history
