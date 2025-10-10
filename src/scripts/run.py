@@ -12,7 +12,7 @@ from irobot_edu_sdk.robots import Create3
 from src.core.config import CPTS_DIR, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES
 from src.core.control import run_controller
 
-robot = Create3(Bluetooth(ROBOT_NAME))
+robot = Create3(Bluetooth())
 print("[run] Using event-driven SDK loop")
 
 @event(robot.when_play)
