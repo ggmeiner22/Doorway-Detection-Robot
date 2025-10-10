@@ -93,6 +93,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             label = "Wall"
             label_map = {"w": "Wall", "s": "Door_Start", "d": "Door", "p": "Door_Passed"}
             if distance_since_last_prompt >= 10:
+                await robot.set_wheel_speeds(0, 0)
                 print("Please enter a label for the current location: (w)all, (s)tart, (d)oor, (p)assed:")
                 label_shortcut = input()
                 label = label_map.get(label_shortcut, "Wall")
