@@ -32,35 +32,33 @@ def prox_to_cm(sensor_reading: float) -> float:
 def cm_to_bin10(cm: float) -> int:
     return int(max(0, min(9, cm // 10)))
 
-def discretize_p(measurement: float, setpoint: float) -> float:
+def discretize_p_10_bins(measurement: float, setpoint: float) -> int:
     if setpoint <= 0:
-        return 1.0  # Default to bin 1.0 (zero error)
+        return 5
     val = 2 - (measurement / setpoint)
-    if val < 0.25:
-        return 0.0
-    elif val < 0.75:
-        return 0.5
-    elif val < 1.25:
-        return 1.0
-    elif val < 1.75:
-        return 1.5
-    else:
-        return 2.0
+    clamped_val = max(0.0, min(val, 2.0))
+    norm_val = clamped_val / 2.0
+    binned_val = int(norm_val * 10)
+    return max(0, min(binned_val, 9))
 
-def discretize_i(integral_val: float, setpoint: float) -> int:
-    threshold = 0.25 * setpoint
-    if integral_val < -threshold:
-        return -1
-    elif integral_val > threshold:
-        return 1
-    else:
-        return 0
+def discretize_i_10_bins(integral_val: float, setpoint: float) -> int:
+    if setpoint <= 0:
+        return 5
+    T = 0.5 * setpoint
+    if T <= 0:
+        return 5
+    clamped_val = max(-T, min(integral_val, T))
+    norm_val = (clamped_val / (2 * T)) + 0.5
+    binned_val = int(norm_val * 10)
+    return max(0, min(binned_val, 9))
 
-def discretize_d(derivative_val: float, setpoint: float) -> int:
-    threshold = 0.05 * setpoint
-    if derivative_val < -threshold:
-        return -1
-    elif derivative_val > threshold:
-        return 1
-    else:
-        return 0
+def discretize_d_10_bins(derivative_val: float, setpoint: float) -> int:
+    if setpoint <= 0:
+        return 5
+    T = 0.1 * setpoint
+    if T <= 0:
+        return 5
+    clamped_val = max(-T, min(derivative_val, T))
+    norm_val = (clamped_val / (2 * T)) + 0.5
+    binned_val = int(norm_val * 10)
+    return max(0, min(binned_val, 9))

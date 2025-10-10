@@ -9,12 +9,8 @@ def get_possible_values():
     for f in FEATURES:
         if f.startswith("IR"):
             values[f] = list(range(10))
-        elif f.startswith("PIDP"):
-            values[f] = [0.0, 0.5, 1.0, 1.5, 2.0]
-        elif f.startswith("PIDI"):
-            values[f] = [-1, 0, 1]
-        elif f.startswith("PIDD"):
-            values[f] = [-1, 0, 1]
+        elif f.startswith("PIDP") or f.startswith("PIDI") or f.startswith("PIDD"):
+            values[f] = list(range(10))
         elif f.startswith("BI"):
             values[f] = [0, 1]  # For False/True
     return values
