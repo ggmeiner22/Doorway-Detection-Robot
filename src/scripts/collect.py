@@ -2,8 +2,8 @@ from __future__ import annotations
 import asyncio
 from irobot_edu_sdk.backend.bluetooth import Bluetooth
 from irobot_edu_sdk.robots import Create3
-from core.control import collect_data_manual
-from core.config import DATA_CSV, ROBOT_NAME
+from src.core.control import collect_data_manual
+from src.core.config import DATA_CSV, ROBOT_NAME
 
 
 async def main():
