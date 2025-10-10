@@ -4,7 +4,7 @@ import os
 ROOT         = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
 DATA_CSV     = PROJECT_ROOT / ".." / "data" / "synthetic_measurements.csv"
-CPTS_DIR     = PROJECT_ROOT / "cpts"
+CPTS_DIR     = PROJECT_ROOT / ".." / "cpts"
 FEATURES     = [f"IR{i}" for i in range(1, 10)] + \
              [f"PIDP{i}" for i in range(1, 10)] + \
              [f"PIDD{i}" for i in range(1, 10)] + \
@@ -36,7 +36,9 @@ CM_PER_STEP = 1.0            # for "10 cm ago" (≈10 cycles at 10 Hz)
 
 
 # Prefer explicit MAC via env; fallback to default advertised name
-ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-88FA7A7E3FCC461E8B675C")
+ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-030")
+#ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot_25")
+#ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-88FA7A7E3FCC461E8B675C")
 #ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-030F9BF3B40449DC94031C")
 
 def ensure_dirs():
