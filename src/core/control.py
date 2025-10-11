@@ -77,14 +77,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
             
-            u = controller.update(measurement=dist_cm, dt=dt)
-            if WALL_SIDE == 'right':
-                L = max(min(forward - u * 1, max_w), min_w)
-                R = max(min(forward + u * 1, max_w), min_w)
-            else:  # left
-                L = max(min(forward + u * 1, max_w), min_w)
-                R = max(min(forward - u * 1, max_w), min_w)
-            await robot.set_wheel_speeds(L, R)
+            L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
+                                             WALL_SIDE, forward, max_w, min_w)
 
             # Update history
             ir_history.append(cm_to_bin12(dist_cm))
@@ -164,14 +158,8 @@ async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = D
             d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
 
-            u = controller.update(measurement=dist_cm, dt=dt)
-            if WALL_SIDE == 'right':
-                L = max(min(forward - u * 1, max_w), min_w)
-                R = max(min(forward + u * 1, max_w), min_w)
-            else:  # left
-                L = max(min(forward + u * 1, max_w), min_w)
-                R = max(min(forward - u * 1, max_w), min_w)
-            await robot.set_wheel_speeds(L, R)
+            L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
+                                             WALL_SIDE, forward, max_w, min_w)
 
             reading = {"IR1": cm_to_bin12(dist_cm), "IR5": cm_to_bin12(dist_cm)}
             b = belief(reading, {"cpts_dir": str(cpts_dir), "door_states": door_states})
@@ -236,14 +224,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
             d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
             
-            u = controller.update(measurement=dist_cm, dt=dt)
-            if WALL_SIDE == 'right':
-                L = max(min(forward - u * 1, max_w), min_w)
-                R = max(min(forward + u * 1, max_w), min_w)
-            else:  # left
-                L = max(min(forward + u * 1, max_w), min_w)
-                R = max(min(forward - u * 1, max_w), min_w)
-            await robot.set_wheel_speeds(L, R)
+            await apply_pid_to_motors(robot, controller, dist_cm, dt,
+                                      WALL_SIDE, forward, max_w, min_w)
 
             # Update history
             ir_history.append(cm_to_bin12(dist_cm))
