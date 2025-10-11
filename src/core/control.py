@@ -114,10 +114,10 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 print(f"  Labelled as: {label}")
                 distance_since_last_prompt = 0
 
-            # Write to CSV
-            row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-            w.writerow(row)
-            f.flush()
+                # Write to CSV
+                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+                w.writerow(row)
+                f.flush()
 
             print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
             #print (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
