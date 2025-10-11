@@ -15,12 +15,8 @@ def get_possible_values():
             values[f] = [0, 1]  # For False/True
     return values
 
-def learn_cpts_from_csv(csv_path: Path, out_dir: Path, smoothing: float = 1.0):
-    rows = []
-    with csv_path.open("r", newline="", encoding="utf-8") as f:
-        rdr = csv.DictReader(f)
-        rows = list(rdr)
-    if not rows: raise RuntimeError("No rows in collected CSV.")
+def learn_cpts_from_rows(rows: list[dict], out_dir: Path, smoothing: float = 1.0):
+    if not rows: raise RuntimeError("No rows to learn from.")
 
     values = get_possible_values()
 
@@ -61,3 +57,12 @@ def learn_cpts_from_csv(csv_path: Path, out_dir: Path, smoothing: float = 1.0):
             for v in values[f]:
                 w.writerow([v] + [cond[f][loc].get(v, 0.0) for loc in LOCATIONS])
     print(f"[train] CPTs written → {out_dir.resolve()}")
+
+
+def learn_cpts_from_csv(csv_path: Path, out_dir: Path, smoothing: float = 1.0):
+    rows = []
+    with csv_path.open("r", newline="", encoding="utf-8") as f:
+        rdr = csv.DictReader(f)
+        rows = list(rdr)
+    if not rows: raise RuntimeError("No rows in collected CSV.")
+    learn_cpts_from_rows(rows, out_dir, smoothing)

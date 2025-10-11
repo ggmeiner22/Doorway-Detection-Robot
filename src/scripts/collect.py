@@ -1,3 +1,4 @@
+import time
 from irobot_edu_sdk.robots import event
 from irobot_edu_sdk.music import Note
 from irobot_edu_sdk.backend.bluetooth import Bluetooth
@@ -29,7 +30,11 @@ async def play(robot):
     print(f"[run] Connected to {ROBOT_NAME}")
     ensure_dirs()
 
+    # Generate a unique filename for the data collection session
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    session_csv = DATA_CSV.parent / f"measurements_{timestamp}.csv"
+
     #Collect Data
-    await collect_data_manual(robot, data_csv=DATA_CSV)
+    await collect_data_manual(robot, data_csv=session_csv)
 
 robot.play()
