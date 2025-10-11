@@ -155,7 +155,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
         f.close()
         print(f"[collect] saved → {data_csv.resolve()}")
 
-async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
+async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: float = DT,
                                  setpoint_cm: float = SETPOINT_CM,
                                  forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
@@ -163,7 +163,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
     """
     controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
     ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
-
+    
+    belief_history = []
     distance_since_last_prediction = 0
     pose = await robot.get_position()
     last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
@@ -192,32 +193,50 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
             update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
                              dist_cm, controller, bumpers, dt, setpoint_cm)
 
+            # Create readings dictionary from history for belief calculation
+            all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+            readings = {feature: value for feature, value in zip(FEATURES, all_history)}
+            b = belief(readings, {"cpts_dir": str(cpts_dir), "door_states": door_states})
+            belief_history.append(b)
+
             distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5) * 100 # meters to cm
             last_pos = pos.copy()
 
             if distance_since_last_prediction >= 10:
-                print("--- Predicting location ---")
+                print("\n--- PREDICTIONS ---")
                 
-                # Create readings dictionary from history
-                all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-                readings = {feature: value for feature, value in zip(FEATURES, all_history)}
-
-                # Get belief
-                b = belief(readings, {"cpts_dir": str(cpts_dir)})
+                # Location prediction
                 posterior = b.get("posterior", {})
-
                 if posterior:
-                    # Find predicted location
                     predicted_location = max(posterior, key=posterior.get)
                     print(f"Predicted Location: {predicted_location}")
-
-                    # Print normalized probabilities
-                    print("Location Probabilities:")
+                    print("  Location Probabilities:")
                     for location, probability in sorted(posterior.items()):
-                        print(f"  - {location}: {probability:.4f}")
+                        print(f"    - {location}: {probability:.4f}")
                 else:
-                    print("Could not calculate belief.")
+                    print("Could not calculate location belief.")
 
+                # Door passed 10cm ago prediction
+                p_ago = door_passed_10cm_ago(belief_history, cm_per_step=1.0, door_states=tuple(door_states))
+                print(f"\nProbability of having passed a door 10cm ago: {p_ago:.4f}")
+                if p_ago > 0.6:
+                    print("  DECISION: YES, a door was passed ~10cm ago.")
+                else:
+                    print("  DECISION: NO, a door was not passed ~10cm ago.")
+
+                # Distance from wall prediction
+                p_distance_bins = b.get("p_distance_bins", {})
+                if p_distance_bins:
+                    expected_cm = sum((bin_idx*10 + 5) * p for bin_idx, p in p_distance_bins.items())
+                    print(f"\nPredicted Distance from Wall: {expected_cm:.1f} cm")
+                    print("  Distance Distribution:")
+                    for bin_idx, prob in sorted(p_distance_bins.items()):
+                        if prob > 0.01: # Only print significant probabilities
+                            print(f"    - {bin_idx*10}-{(bin_idx+1)*10} cm: {prob:.4f}")
+                else:
+                    print("Could not calculate distance distribution.")
+                
+                print("-------------------\n")
                 distance_since_last_prediction = 0
 
             await asyncio.sleep(dt)
