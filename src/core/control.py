@@ -155,50 +155,6 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
         f.close()
         print(f"[collect] saved → {data_csv.resolve()}")
 
-async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = DT,
-                         setpoint_cm: float = SETPOINT_CM,
-                         forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
-    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
-
-    history = []
-    try:
-        while True:
-            pm1 = await robot.get_ir_proximity()
-            if pm1 is None or pm1.sensors is None:
-                await asyncio.sleep(dt); continue
-            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
-            await asyncio.sleep(0.02)
-            pm2 = await robot.get_ir_proximity()
-            if pm2 is None or pm2.sensors is None:
-                await asyncio.sleep(dt); continue
-            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
-            dist_cm = 0.5*(d1+d2)
-
-            L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
-                                             WALL_SIDE, forward, max_w, min_w)
-
-            reading = {"IR1": cm_to_bin12(dist_cm), "IR5": cm_to_bin12(dist_cm)}
-            b = belief(reading, {"cpts_dir": str(cpts_dir), "door_states": door_states})
-            p_bins = b.get("p_distance_bins", {})       # {bin_index: prob}
-            expected_cm = sum((bin_idx*10 + 5) * p for bin_idx, p in p_bins.items())
-            print(f"[control] E[distance]≈{expected_cm:.1f}cm  p_bins={p_bins}")
-            
-            history.append(b)
-            p_now = b.get("p_door_passed", 0.0)
-            p_ago = door_passed_10cm_ago(history, cm_per_step=1.0, door_states=tuple(door_states))
-
-            if p_now > 0.6 or p_ago > 0.6:
-                await robot.set_lights_on_rgb(255,0,255)
-                await robot.set_wheel_speeds(max(min_w, forward*0.5), max(min_w, forward*0.5))
-            else:
-                await robot.set_lights_on_rgb(0,255,0)
-
-            print(f"[control] dist≈{dist_cm:5.1f}cm bin={reading['IR1']} door_now={p_now:.2f} door_10cm_ago={p_ago:.2f} L,R=({L:.1f},{R:.1f})")
-            await asyncio.sleep(dt)
-    finally:
-        await robot.set_wheel_speeds(0,0)
-        await robot.set_lights_on_rgb(255,0,0)
-
 async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
                                  setpoint_cm: float = SETPOINT_CM,
                                  forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
