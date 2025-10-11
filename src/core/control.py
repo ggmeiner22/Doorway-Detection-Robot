@@ -140,10 +140,10 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 print(f"  Labelled as: {label}")
                 distance_since_last_prompt = 0
 
-            # Write to CSV
-            row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-            w.writerow(row)
-            f.flush()
+                # Write to CSV
+                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+                w.writerow(row)
+                f.flush()
 
             print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
             #print (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
@@ -159,7 +159,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                                  setpoint_cm: float = SETPOINT_CM,
                                  forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
-    Wall-follows, and predicts location every 10cm.
+    Wall-follows, and predicts location every 10cm, saving predictions to a CSV file.
     """
     controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
     ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
@@ -168,6 +168,17 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     distance_since_last_prediction = 0
     pose = await robot.get_position()
     last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+
+    # --- CSV setup for predictions ---
+    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+    data_dir = cpts_dir.parent / "data"
+    predictions_csv_path = data_dir / f"predictions_{timestamp_str}.csv"
+    
+    pred_f = predictions_csv_path.open("w", newline="", encoding="utf-8")
+    pred_w = csv.writer(pred_f)
+    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm"]
+    pred_w.writerow(header)
+    pred_f.flush()
 
     try:
         while True:
@@ -205,6 +216,11 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
             if distance_since_last_prediction >= 10:
                 print("\n--- PREDICTIONS ---")
                 
+                # --- Initialize variables for this prediction cycle ---
+                predicted_location = "N/A"
+                p_ago = 0.0
+                expected_cm = 0.0
+
                 # Location prediction
                 posterior = b.get("posterior", {})
                 if posterior:
@@ -219,7 +235,9 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 # Door passed 10cm ago prediction
                 p_ago = door_passed_10cm_ago(belief_history, cm_per_step=1.0, door_states=tuple(door_states))
                 print(f"\nProbability of having passed a door 10cm ago: {p_ago:.4f}")
+                door_passed_decision = "NO"
                 if p_ago > 0.6:
+                    door_passed_decision = "YES"
                     print("  DECISION: YES, a door was passed ~10cm ago.")
                 else:
                     print("  DECISION: NO, a door was not passed ~10cm ago.")
@@ -237,9 +255,16 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                     print("Could not calculate distance distribution.")
                 
                 print("-------------------\n")
+
+                # --- Write to CSV ---
+                pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm])
+                pred_f.flush()
+
                 distance_since_last_prediction = 0
 
             await asyncio.sleep(dt)
 
     finally:
         await robot.set_wheel_speeds(0, 0)
+        pred_f.close()
+        print(f"\n[predictor] Predictions saved to {predictions_csv_path.resolve()}")
