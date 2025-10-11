@@ -87,7 +87,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 d_val = (controller._prev - controller._prev_prev) / dt
             d_binned = discretize_d_10_bins(d_val, setpoint_cm)
             pid_d_history.append(d_binned)
-            bumper_history.append(any(bumpers))
+            bumper_history.append(any([bumpers.left, bumpers.right, bumpers.front_left, bumpers.front_right]))
 
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
@@ -159,7 +159,7 @@ async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = D
                 R = max(min(forward - u * 1, max_w), min_w)
             await robot.set_wheel_speeds(L, R)
 
-            reading = {"IR1": cm_to_bin10(dist_cm), "IR5": cm_to_bin10(dist_cm)}
+            reading = {"IR1": cm_to_bin12(dist_cm), "IR5": cm_to_bin12(dist_cm)}
             b = belief(reading, {"cpts_dir": str(cpts_dir), "door_states": door_states})
             p_bins = b.get("p_distance_bins", {})       # {bin_index: prob}
             expected_cm = sum((bin_idx*10 + 5) * p for bin_idx, p in p_bins.items())
@@ -180,3 +180,100 @@ async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = D
     finally:
         await robot.set_wheel_speeds(0,0)
         await robot.set_lights_on_rgb(255,0,0)
+
+async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
+                                 setpoint_cm: float = SETPOINT_CM,
+                                 forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
+    """
+    Wall-follows, and predicts location every 10cm.
+    """
+    # PID for wall-follow
+    controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
+    await robot.set_lights_on_rgb(0, 255, 0)
+    await robot.set_wheel_speeds(forward, forward)
+
+    # History deques
+    history_len = 9
+    ir_history = deque([0]*history_len, maxlen=history_len)
+    pid_p_history = deque([0.0]*history_len, maxlen=history_len)
+    pid_i_history = deque([0.0]*history_len, maxlen=history_len)
+    pid_d_history = deque([0.0]*history_len, maxlen=history_len)
+    bumper_history = deque([False]*history_len, maxlen=history_len)
+
+    distance_since_last_prediction = 0
+    pose = await robot.get_position()
+    last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+
+    try:
+        while True:
+            # Get sensor data
+            pm1 = await robot.get_ir_proximity()
+            await asyncio.sleep(0.05)
+            pm2 = await robot.get_ir_proximity()
+            bumpers = await robot.get_bumpers()
+            pose = await robot.get_position()
+            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+
+            if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pos is None or last_pos is None:
+                await asyncio.sleep(dt)
+                continue
+
+            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
+            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
+            dist_cm = 0.5*(d1+d2)
+            
+            u = controller.update(measurement=dist_cm, dt=dt)
+            if WALL_SIDE == 'right':
+                L = max(min(forward - u * 1, max_w), min_w)
+                R = max(min(forward + u * 1, max_w), min_w)
+            else:  # left
+                L = max(min(forward + u * 1, max_w), min_w)
+                R = max(min(forward - u * 1, max_w), min_w)
+            await robot.set_wheel_speeds(L, R)
+
+            # Update history
+            ir_history.append(cm_to_bin12(dist_cm))
+            p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
+            pid_p_history.append(p_binned)
+            i_val = controller._integ
+            i_binned = discretize_i_10_bins(i_val, setpoint_cm)
+            pid_i_history.append(i_binned)
+            d_val = 0.0
+            if controller._prev is not None and controller._prev_prev is not None:
+                d_val = (controller._prev - controller._prev_prev) / dt
+            d_binned = discretize_d_10_bins(d_val, setpoint_cm)
+            pid_d_history.append(d_binned)
+            bumper_history.append(any([bumpers.left, bumpers.right, bumpers.front_left, bumpers.front_right]))
+
+            distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5) * 100 # meters to cm
+            last_pos = pos.copy()
+
+            if distance_since_last_prediction >= 10:
+                print("--- Predicting location ---")
+                
+                # Create readings dictionary from history
+                all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+                readings = {feature: value for feature, value in zip(FEATURES, all_history)}
+
+                # Get belief
+                b = belief(readings, {"cpts_dir": str(cpts_dir)})
+                posterior = b.get("posterior", {})
+
+                if posterior:
+                    # Find predicted location
+                    predicted_location = max(posterior, key=posterior.get)
+                    print(f"Predicted Location: {predicted_location}")
+
+                    # Print normalized probabilities
+                    print("Location Probabilities:")
+                    for location, probability in sorted(posterior.items()):
+                        print(f"  - {location}: {probability:.4f}")
+                else:
+                    print("Could not calculate belief.")
+
+                distance_since_last_prediction = 0
+
+            await asyncio.sleep(dt)
+
+    finally:
+        await robot.set_wheel_speeds(0, 0)
