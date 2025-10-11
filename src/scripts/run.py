@@ -2,7 +2,7 @@
 """Orchestrator: collect -> train CPTs -> control (Create3 over BLE).
 
 Run with:
-    python -m src.run_all_bt
+    python -m src.run.py
 """
 import time, threading
 from irobot_edu_sdk.robots import event
