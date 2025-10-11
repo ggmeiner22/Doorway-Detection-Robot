@@ -210,7 +210,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
             b = belief(readings, {"cpts_dir": str(cpts_dir), "door_states": door_states})
             belief_history.append(b)
 
-            distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5) * 100 # meters to cm
+            distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
             last_pos = pos.copy()
 
             if distance_since_last_prediction >= 10:
