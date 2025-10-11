@@ -15,6 +15,20 @@ from .config import (
 
 import keyboard
 pose_dtype = np.dtype([("x", np.float64), ("y", np.float64)])
+
+async def apply_pid_to_motors(robot: Create3, controller: PID, dist_cm: float, dt: float,
+                              wall_side: str, forward: float, max_w: float, min_w: float):
+    """Calculates PID output and applies it to the robot's motors."""
+    u = controller.update(measurement=dist_cm, dt=dt)
+    if wall_side == 'right':
+        L = max(min(forward - u * 1, max_w), min_w)
+        R = max(min(forward + u * 1, max_w), min_w)
+    else:  # left
+        L = max(min(forward + u * 1, max_w), min_w)
+        R = max(min(forward - u * 1, max_w), min_w)
+    await robot.set_wheel_speeds(L, R)
+    return L, R
+
 async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                                setpoint_cm: float = SETPOINT_CM,
                                forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
@@ -87,7 +101,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 d_val = (controller._prev - controller._prev_prev) / dt
             d_binned = discretize_d_10_bins(d_val, setpoint_cm)
             pid_d_history.append(d_binned)
-            bumper_history.append(any([bumpers.left, bumpers.right, bumpers.front_left, bumpers.front_right]))
+            bumper_history.append(any(bumpers))
 
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
@@ -114,10 +128,10 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 print(f"  Labelled as: {label}")
                 distance_since_last_prompt = 0
 
-                # Write to CSV
-                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-                w.writerow(row)
-                f.flush()
+            # Write to CSV
+            row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+            w.writerow(row)
+            f.flush()
 
             print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
             #print (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
