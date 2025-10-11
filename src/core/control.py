@@ -29,24 +29,56 @@ async def apply_pid_to_motors(robot: Create3, controller: PID, dist_cm: float, d
     await robot.set_wheel_speeds(L, R)
     return L, R
 
+async def initialize_pid_wall_follower(robot: Create3, setpoint_cm: float, forward: float) -> PID:
+    """Initializes PID controller and sets initial robot lights and speed."""
+    controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
+    await robot.set_lights_on_rgb(0, 255, 0)
+    await robot.set_wheel_speeds(forward, forward)
+    return controller
+
+def initialize_history_deques(history_len: int = 9) -> tuple:
+    """Initializes and returns a tuple of history deques."""
+    ir_history = deque([0]*history_len, maxlen=history_len)
+    pid_p_history = deque([0.0]*history_len, maxlen=history_len)
+    pid_i_history = deque([0.0]*history_len, maxlen=history_len)
+    pid_d_history = deque([0.0]*history_len, maxlen=history_len)
+    bumper_history = deque([False]*history_len, maxlen=history_len)
+    return ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history
+
+def update_histories(
+    ir_history: deque,
+    pid_p_history: deque,
+    pid_i_history: deque,
+    pid_d_history: deque,
+    bumper_history: deque,
+    dist_cm: float,
+    controller: PID,
+    bumpers,
+    dt: float,
+    setpoint_cm: float
+):
+    """Updates all history deques with new sensor data."""
+    ir_history.append(cm_to_bin12(dist_cm))
+    p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
+    pid_p_history.append(p_binned)
+    i_val = controller._integ
+    i_binned = discretize_i_10_bins(i_val, setpoint_cm)
+    pid_i_history.append(i_binned)
+    d_val = 0.0
+    if controller._prev is not None and controller._prev_prev is not None:
+        d_val = (controller._prev - controller._prev_prev) / dt
+    d_binned = discretize_d_10_bins(d_val, setpoint_cm)
+    pid_d_history.append(d_binned)
+    bumper_history.append(any(bumpers))
+
 async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                                setpoint_cm: float = SETPOINT_CM,
                                forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
     Wall-follows, and collects time-shifted data with manual annotation.
     """
-    # PID for wall-follow
-    controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
-    await robot.set_lights_on_rgb(0, 255, 0)
-    await robot.set_wheel_speeds(forward, forward)
-
-    # History deques
-    history_len = 9
-    ir_history = deque([0]*history_len, maxlen=history_len)
-    pid_p_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_i_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_d_history = deque([0.0]*history_len, maxlen=history_len)
-    bumper_history = deque([False]*history_len, maxlen=history_len)
+    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
+    ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
 
     # CSV setup
     new_file = not data_csv.exists()
@@ -80,22 +112,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
                                              WALL_SIDE, forward, max_w, min_w)
 
-            # Update history
-            ir_history.append(cm_to_bin12(dist_cm))
-            # P term
-            p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
-            pid_p_history.append(p_binned)
-            # I term
-            i_val = controller._integ
-            i_binned = discretize_i_10_bins(i_val, setpoint_cm)
-            pid_i_history.append(i_binned)
-            # D term
-            d_val = 0.0
-            if controller._prev is not None and controller._prev_prev is not None:
-                d_val = (controller._prev - controller._prev_prev) / dt
-            d_binned = discretize_d_10_bins(d_val, setpoint_cm)
-            pid_d_history.append(d_binned)
-            bumper_history.append(any(bumpers))
+            update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
+                             dist_cm, controller, bumpers, dt, setpoint_cm)
 
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
@@ -140,9 +158,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
 async def run_controller(robot: Create3, *, cpts_dir, door_states, dt: float = DT,
                          setpoint_cm: float = SETPOINT_CM,
                          forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
-    controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
-    await robot.set_lights_on_rgb(0,255,0)
-    await robot.set_wheel_speeds(forward, forward)
+    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
 
     history = []
     try:
@@ -189,18 +205,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
     """
     Wall-follows, and predicts location every 10cm.
     """
-    # PID for wall-follow
-    controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
-    await robot.set_lights_on_rgb(0, 255, 0)
-    await robot.set_wheel_speeds(forward, forward)
-
-    # History deques
-    history_len = 9
-    ir_history = deque([0]*history_len, maxlen=history_len)
-    pid_p_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_i_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_d_history = deque([0.0]*history_len, maxlen=history_len)
-    bumper_history = deque([False]*history_len, maxlen=history_len)
+    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
+    ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
 
     distance_since_last_prediction = 0
     pose = await robot.get_position()
@@ -227,19 +233,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, dt: float = DT,
             await apply_pid_to_motors(robot, controller, dist_cm, dt,
                                       WALL_SIDE, forward, max_w, min_w)
 
-            # Update history
-            ir_history.append(cm_to_bin12(dist_cm))
-            p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
-            pid_p_history.append(p_binned)
-            i_val = controller._integ
-            i_binned = discretize_i_10_bins(i_val, setpoint_cm)
-            pid_i_history.append(i_binned)
-            d_val = 0.0
-            if controller._prev is not None and controller._prev_prev is not None:
-                d_val = (controller._prev - controller._prev_prev) / dt
-            d_binned = discretize_d_10_bins(d_val, setpoint_cm)
-            pid_d_history.append(d_binned)
-            bumper_history.append(any([bumpers.left, bumpers.right, bumpers.front_left, bumpers.front_right]))
+            update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
+                             dist_cm, controller, bumpers, dt, setpoint_cm)
 
             distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5) * 100 # meters to cm
             last_pos = pos.copy()
