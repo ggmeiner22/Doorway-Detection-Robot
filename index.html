@@ -469,6 +469,13 @@
             </div>
         </div>
     </header>
+
+    <section id="team" class="section-alt scroll-animate">
+        <div class="container">
+            <h2>Our Team</h2>
+            <div id="team-description-content"></div>
+        </div>
+    </section>
     
     <section id="project1" class="section-alt scroll-animate">
         <div class="container">
@@ -587,6 +594,7 @@
                 }
             };
 
+            renderMarkdown('docs/team_description.md', 'team-description-content');
             renderMarkdown('docs/project_description.md', 'project-description-content');
             renderMarkdown('docs/robot_description.md', 'robot-description-content');
             renderMarkdown('docs/bayesian_network_description.md', 'bayesian-network-description-content');
