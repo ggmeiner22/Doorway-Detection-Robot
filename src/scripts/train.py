@@ -1,4 +1,5 @@
 import csv
+import shutil
 from src.core.cpt_learn import learn_cpts_from_rows
 from src.core.config import DATA_CSV, CPTS_DIR
 
@@ -23,3 +24,23 @@ if __name__ == "__main__":
 
     print(f"[train] Learning CPTs from {len(all_rows)} total rows across {len(all_csvs)} file(s)...")
     learn_cpts_from_rows(all_rows, CPTS_DIR, smoothing=0.0)
+
+    # --- Create zip archives for website download ---
+    print("[train] Creating zip archives for website...")
+    
+    # Define paths
+    project_root = CPTS_DIR.parent
+    data_exports_dir = project_root / 'docs' / 'data_exports'
+
+    # Create the exports directory
+    data_exports_dir.mkdir(exist_ok=True)
+
+    # Archive the CPTs directory
+    cpts_archive_path = data_exports_dir / 'cpts'
+    shutil.make_archive(str(cpts_archive_path), 'zip', str(project_root), 'cpts')
+    print(f"[train] CPTs archive created at {str(cpts_archive_path)}.zip")
+
+    # Archive the data directory
+    data_archive_path = data_exports_dir / 'data'
+    shutil.make_archive(str(data_archive_path), 'zip', str(project_root), 'data')
+    print(f"[train] Data archive created at {str(data_archive_path)}.zip")

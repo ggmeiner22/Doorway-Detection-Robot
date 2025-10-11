@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sensor Fusion Project - Wall-Following Robot</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -472,7 +473,8 @@
     <section id="project1" class="section-alt scroll-animate">
         <div class="container">
             <h2>Project 1 Description</h2>
-            <div class="project-description">
+            <div class="project-description" id="project-description-content">
+            </div>
     </section>
 
     
@@ -480,14 +482,7 @@
         <div class="container">
             <h2>iCreate3 Robot Description</h2>
             <div class="robot-description">
-                <div class="robot-text">
-                    <p> we need to write something about irobot
-                        <li>7 x Infrared Sensors (IR)</li>
-                        <li>4 x Cliff Sensors (IR)</li>
-                        <li>2 x Bumper Sensors</li>
-                        <li>Optical Wheel Encoders (wheel speed & distance traveled)</li>
-                        <li>Charging Contacts & Docking Sensor</li>
-                    </ul>
+                <div class="robot-text" id="robot-description-content">
                 </div>
                 <div class="robot-image">
                     <div class="placeholder-img">
@@ -500,10 +495,9 @@
     
     <section id="bayesian" class="section-alt scroll-animate">
         <div class="container">
-            <h2>Dynamic Bayesian Network Description</h2>
+            <h2>Bayesian Network Description</h2>
             <div class="robot-description">
-                <div class="robot-text">
-                    <p>need to write something here</p>
+                <div class="robot-text" id="bayesian-network-description-content">
                 </div>
                 <div class="robot-image">
                     <div class="placeholder-img">
@@ -513,80 +507,23 @@
             </div>
             
             <h3>Variables</h3>
-            <div class="variables-grid">
-                <div class="variable-card fade-in">
-                    <h4>RobotState</h4>
-                    <p>Indicates which state the robot is in</p>
-                    <div class="state-colors">
-                        <div class="state-color">
-                            <div class="color-indicator green"></div>
-                            <span>Wall Following</span>
-                        </div>
-                        <div class="state-color">
-                            <div class="color-indicator yellow"></div>
-                            <span>Possible Door Frame</span>
-                        </div>
-                        <div class="state-color">
-                            <div class="color-indicator magenta"></div>
-                            <span>In Door Frame</span>
-                        </div>
-                        <div class="state-color">
-                            <div class="color-indicator blue"></div>
-                            <span>Passed Door Frame</span>
-                        </div>
-                        <div class="state-color">
-                            <div class="color-indicator red"></div>
-                            <span>Return Home</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="variable-card fade-in">
-                    <h4>Wall Distance</h4>
-                    <p>something here .</p>
-                </div>
-                
-                <div class="variable-card fade-in">
-                    <h4>Bump</h4>
-                    <p>something here</p>
-                </div>
-                
-                <div class="variable-card fade-in">
-                    <h4>IR Sensor</h4>
-                    <p>something here.</p>
-                </div>
-            </div>
+            <div id="variables-description-content"></div>
         </div>
     </section>
     
     <section id="source-code" class="section-alt scroll-animate">
         <div class="container">
             <h2>Source Code & Dependencies</h2>
-            <p></p>
-            
-            <div class="code-section">
-                <code>pip install irobot<br>pip3 install irobot_edu_sdk<br></code>
-            </div>
-            
-            <h3>Dependencies</h3>
-            <ul>
-                <li>Download the latest version of <a href="#" class="download-btn"><i class="fab fa-python"></i> Python</a></li>
-                <li>Download iRobot library <a href="#" class="download-btn"><i class="fas fa-download"></i> irobot_edu_python_sdk</a></li>
-            </ul>
-            
-            <h3>Project 1 Source Code</h3>
-            
-            
+            <div id="source-code-info-content"></div>
         </div>
     </section>
     
     <section id="cpts" class="section-alt scroll-animate">
         <div class="container">
             <h2>Project 1 CPTs and Downloadable Files</h2>
-            
-        
-            
-            
+            <div id="cpts-info-content"></div>
+        </div>
+    </section>
     
     <footer>
         <div class="footer-content">
@@ -598,8 +535,8 @@
     </footer>
 
     <script>
-        // Scroll animation
         document.addEventListener('DOMContentLoaded', function() {
+            // Scroll animation
             const scrollElements = document.querySelectorAll('.scroll-animate');
             
             const elementInView = (el, dividend = 1) => {
@@ -627,6 +564,28 @@
             
             // Initial check
             handleScrollAnimation();
+
+            // --- Load markdown content ---
+            const renderMarkdown = (filePath, elementId) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    fetch(filePath)
+                        .then(response => response.ok ? response.text() : Promise.reject('File not found'))
+                        .then(text => {
+                            element.innerHTML = marked.parse(text);
+                        })
+                        .catch(error => {
+                            element.innerHTML = `<p style="color: red;">Error loading content: ${error}</p>`;
+                        });
+                }
+            };
+
+            renderMarkdown('project_description.md', 'project-description-content');
+            renderMarkdown('robot_description.md', 'robot-description-content');
+            renderMarkdown('bayesian_network_description.md', 'bayesian-network-description-content');
+            renderMarkdown('variables_description.md', 'variables-description-content');
+            renderMarkdown('source_code_info.md', 'source-code-info-content');
+            renderMarkdown('cpts_info.md', 'cpts-info-content');
         });
     </script>
 </body>
