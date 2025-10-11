@@ -87,7 +87,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 d_val = (controller._prev - controller._prev_prev) / dt
             d_binned = discretize_d_10_bins(d_val, setpoint_cm)
             pid_d_history.append(d_binned)
-            bumper_history.append(any([bumpers.left, bumpers.right, bumpers.front_left, bumpers.front_right]))
+            bumper_history.append(any(bumpers))
 
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
