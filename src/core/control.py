@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio, csv, time
+import numpy as np
 from collections import deque
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
@@ -13,7 +14,7 @@ from .config import (
 )
 
 import keyboard
-
+pose_dtype = np.dtype([("x", np.float64), ("y", np.float64)])
 async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                                setpoint_cm: float = SETPOINT_CM,
                                forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
@@ -41,7 +42,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
         w.writerow(["location"] + FEATURES)
 
     distance_since_last_prompt = 0
-    last_pos = await robot.get_position()
+    pose = await robot.get_position()
+    last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
 
     try:
         while not keyboard.is_pressed('q'):
@@ -50,7 +52,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             await asyncio.sleep(0.05)
             pm2 = await robot.get_ir_proximity()
             bumpers = await robot.get_bumpers()
-            pos = await robot.get_position()
+            pose = await robot.get_position()
+            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
 
             if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pos is None or last_pos is None:
                 await asyncio.sleep(dt)
@@ -87,14 +90,14 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             bumper_history.append(any(bumpers))
 
             # Manual annotation
-            distance_since_last_prompt += (((pos.x - last_pos.x)**2 + (pos.y - last_pos.y)**2)**0.5) * 100
-            last_pos = pos
+            distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
+            
 
             label = "Wall"
             label_map = {"w": "Wall", "s": "Door_Start", "d": "Door", "p": "Door_Passed"}
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
-                print("Please enter a label for the current location: (w)all, (s)tart, (d)oor, (p)assed:")
+                print("Please enter a label for the wcurrent location: (w)all, (s)tart, (d)oor, (p)assed:")
                 label_shortcut = None
                 while label_shortcut is None:
                     if keyboard.is_pressed('w'):
@@ -116,7 +119,9 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             w.writerow(row)
             f.flush()
 
-            print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f})")
+            print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
+            #print (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
+            last_pos = pos.copy()
             await asyncio.sleep(dt)
 
     finally:

@@ -6,7 +6,7 @@ from src.core.config import CPTS_DIR, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES, 
 from src.core.control import collect_data_manual
 from src.core.motion import backoff_right, backoff_left
 
-robot = Create3(Bluetooth())
+robot = Create3(Bluetooth(ROBOT_NAME))
 print("[run] Using event-driven SDK loop")
 
 # Register event handlers ***after*** robot is created
