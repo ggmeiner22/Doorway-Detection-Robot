@@ -28,7 +28,13 @@ def learn_cpts_from_rows(rows: list[dict], out_dir: Path, smoothing: float = 1.0
     count_loc = Counter()
     for r in rows:
         loc = r["location"]; count_loc[loc]+=1
-        for f in FEATURES: cond[f][loc][float(r[f])]+=1
+        for f in FEATURES:
+            val_str = r[f]
+            if f.startswith("BI"):
+                val = 1 if val_str == 'True' else 0
+            else:
+                val = float(val_str)
+            cond[f][loc][val] += 1
 
     for f in FEATURES:
         for loc in LOCATIONS:
