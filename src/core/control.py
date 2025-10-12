@@ -45,6 +45,28 @@ def initialize_history_deques(history_len: int = 9) -> tuple:
     bumper_history = deque([False]*history_len, maxlen=history_len)
     return ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history
 
+async def get_label():
+    """Asynchronously and non-blockingly waits for a keypress from the user."""
+    label_map = {"w": "Wall", "s": "Door_Start", "d": "Door", "p": "Door_Passed"}
+
+    print("Please enter a label for the current location: (w)all, (s)tart, (d)oor, (p)assed:")
+    label_shortcut = None
+    while label_shortcut is None:
+        if keyboard.is_pressed('w'):
+            label_shortcut = 'w'
+        elif keyboard.is_pressed('s'):
+            label_shortcut = 's'
+        elif keyboard.is_pressed('d'):
+            label_shortcut = 'd'
+        elif keyboard.is_pressed('p'):
+            label_shortcut = 'p'
+        
+        await asyncio.sleep(0.05) 
+
+    label = label_map.get(label_shortcut, "Wall")
+    print(f"  Labelled as: {label}")
+    return label
+
 def update_histories(
     ir_history: deque,
     pid_p_history: deque,
@@ -112,38 +134,25 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
                                              WALL_SIDE, forward, max_w, min_w)
 
-            update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
-                             dist_cm, controller, bumpers, dt, setpoint_cm)
-
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
             
-
-            label = "Wall"
-            label_map = {"w": "Wall", "s": "Door_Start", "d": "Door", "p": "Door_Passed"}
+            label = None
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
-                print("Please enter a label for the wcurrent location: (w)all, (s)tart, (d)oor, (p)assed:")
-                label_shortcut = None
-                while label_shortcut is None:
-                    if keyboard.is_pressed('w'):
-                        label_shortcut = 'w'
-                    elif keyboard.is_pressed('s'):
-                        label_shortcut = 's'
-                    elif keyboard.is_pressed('d'):
-                        label_shortcut = 'd'
-                    elif keyboard.is_pressed('p'):
-                        label_shortcut = 'p'
-                    await asyncio.sleep(0.05) # prevent busy-waiting
+                if label is None:
+                    label = get_label()
+                    # Write to CSV
+                    row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+                    w.writerow(row)
+                    f.flush()
+                else:
+                    label = get_label()
 
-                label = label_map.get(label_shortcut, "Wall")
-                print(f"  Labelled as: {label}")
+                update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
+                dist_cm, controller, bumpers, dt, setpoint_cm)
+
                 distance_since_last_prompt = 0
-
-                # Write to CSV
-                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-                w.writerow(row)
-                f.flush()
 
             print(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
             #print (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
