@@ -4,5 +4,5 @@ Our team is comprised of students taking CSE 5694: Robotics & AI in Fall of 2025
 
 *   **Garret Gmeiner:** Garrett is a M.S. student studying Computer Science at Florida Institute of Technology, with a focus on Artificial Intelligence.
 *   **Patrick Quinn:** Patrick is a PhD student studying Aerospace Enginnering at Florida Institute of Technology, with a focus on utilizing ML for control systems applications.
-*   **Javier Laboy-Jusino:** A short description or role of the team member.
+*   **Javier Laboy-Jusino:** Javier is a M.S. student studying Computer Engineering at Florida Institute of Technology, with a focus on ML and FPGAs.
 *   **Nikiraj Konwar:** A short description or role of the team member.
