@@ -1,4 +1,4 @@
-Our team is comprised of students taking CSE 5694: Robotics & AI in Fall of 2025 at Florida Institute of Technology. We have a diverse set of backgrounds but all share a passion for robotics. Fixing typo
+Our team is comprised of students taking CSE 5694: Robotics & AI in Fall of 2025 at Florida Institute of Technology. We have a diverse set of backgrounds but all share a passion for robotics.
 
 ### The Team
 
