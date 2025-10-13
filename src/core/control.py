@@ -39,9 +39,9 @@ async def initialize_pid_wall_follower(robot: Create3, setpoint_cm: float, forwa
 def initialize_history_deques(history_len: int = 9) -> tuple:
     """Initializes and returns a tuple of history deques."""
     ir_history = deque([0]*history_len, maxlen=history_len)
-    pid_p_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_i_history = deque([0.0]*history_len, maxlen=history_len)
-    pid_d_history = deque([0.0]*history_len, maxlen=history_len)
+    pid_p_history = deque([0]*history_len, maxlen=history_len)
+    pid_i_history = deque([0]*history_len, maxlen=history_len)
+    pid_d_history = deque([0]*history_len, maxlen=history_len)
     bumper_history = deque([False]*history_len, maxlen=history_len)
     return ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history
 
@@ -174,7 +174,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
     ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
     
-    belief_history = []
+    last_belief = None
     distance_since_last_prediction = 0
     pose = await robot.get_position()
     last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
@@ -218,7 +218,6 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
             all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
             readings = {feature: value for feature, value in zip(FEATURES, all_history)}
             b = belief(readings, {"cpts_dir": str(cpts_dir), "door_states": door_states})
-            belief_history.append(b)
 
             distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
             last_pos = pos.copy()
@@ -243,7 +242,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                     print("Could not calculate location belief.")
 
                 # Door passed 10cm ago prediction
-                p_ago = door_passed_10cm_ago(belief_history, cm_per_step=1.0, door_states=tuple(door_states))
+                if last_belief:
+                    p_ago = sum(last_belief["posterior"].get(s, 0.0) for s in door_states)
                 print(f"\nProbability of having passed a door 10cm ago: {p_ago:.4f}")
                 door_passed_decision = "NO"
                 if p_ago > 0.6:
@@ -255,12 +255,12 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 # Distance from wall prediction
                 p_distance_bins = b.get("p_distance_bins", {})
                 if p_distance_bins:
-                    expected_cm = sum((bin_idx*10 + 5) * p for bin_idx, p in p_distance_bins.items())
+                    expected_cm = sum((bin_idx + 0.5) * p for bin_idx, p in p_distance_bins.items())
                     print(f"\nPredicted Distance from Wall: {expected_cm:.1f} cm")
-                    print("  Distance Distribution:")
+                    print("  Distance Distribution (0-12 cm):")
                     for bin_idx, prob in sorted(p_distance_bins.items()):
                         if prob > 0.01: # Only print significant probabilities
-                            print(f"    - {bin_idx*10}-{(bin_idx+1)*10} cm: {prob:.4f}")
+                            print(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
                 else:
                     print("Could not calculate distance distribution.")
                 
@@ -270,6 +270,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm])
                 pred_f.flush()
 
+                last_belief = b
                 distance_since_last_prediction = 0
 
             await asyncio.sleep(dt)

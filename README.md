@@ -1,5 +1,7 @@
 # Doorway_Detection-Robot
 
+**Project Website:** [**https://ggmeiner22.github.io/Doorway-Detection-Robot/**](https://ggmeiner22.github.io/Doorway-Detection-Robot/)
+
 Wall-following robot with **sensor fusion** (Naive Bayes) and **PID** control.  
 You learn **CPTs** from measurements, then fuse live/batched readings to estimate:
 
