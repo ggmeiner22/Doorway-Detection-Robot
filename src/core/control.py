@@ -109,6 +109,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
     if new_file:
         w.writerow(["location"] + FEATURES)
 
+    label = None
+
     distance_since_last_prompt = 0
     pose = await robot.get_position()
     last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
@@ -137,17 +139,16 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
             
-            label = None
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
-                if label is None:
-                    label = get_label()
+                if label is not None:
+                    label = await get_label()
                     # Write to CSV
                     row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
                     w.writerow(row)
                     f.flush()
                 else:
-                    label = get_label()
+                    label = await get_label()
 
                 update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
                 dist_cm, controller, bumpers, dt, setpoint_cm)
