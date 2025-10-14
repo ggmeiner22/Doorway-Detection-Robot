@@ -107,3 +107,38 @@ python -m src.scripts.run
 ```
 - You’ll see plots and a timeseries CSV suitable for spreadsheets.
 > On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
+
+---
+
+## Configuration
+
+Key knobs you’ll typically adjust:
+- **Setpoint** (desired wall distance).
+- **PID gains** (Kp/Ki/Kd).
+- **Windowing / temporal features** for the “10 cm ago” door signature.
+- **Signal preprocessing** (e.g., median/EMA smoothing).
+- **Labeling schema** for training (consistent, precise timestamps).
+Store your defaults in a small config file or env vars and keep learned tables in *cpts/*.
+
+---
+
+##
+
+
+---
+
+##
+
+
+---
+
+##
+
+
+---
+
+##
+
+---
+
+##
