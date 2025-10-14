@@ -117,7 +117,7 @@ Key knobs you’ll typically adjust:
 - **PID gains** (Kp/Ki/Kd).
 - **Windowing / temporal features** for the “10 cm ago” door signature.
 - **Signal preprocessing** (e.g., median/EMA smoothing).
-- **Labeling schema** for training (consistent, precise timestamps).
+- ***Labeling schema*** for training (consistent, precise timestamps).
 Store your defaults in a small config file or env vars and keep learned tables in *cpts/*.
 
 ---
