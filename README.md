@@ -12,60 +12,98 @@ The repo also includes a small demo that produces plots and a CSV you can open i
 
 ---
 
+## Contents
+
+- [Why](#why)
+- [Features](#features)
+- [Repo layout](#repo-layout)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [Configuration](#configuration)
+- [Outputs](#outputs)
+- [How it works (high-level)](#how-it-works-high-level)
+- [Troubleshooting & tips](#troubleshooting--tips)
+- [Roadmap](#roadmap)
+- [License](#license)
+
+---
+
+## Why
+
+Door transitions create distinctive short-lived signatures in near-wall sensing. By **collecting real measurements**, learning **conditional probability tables (CPTs)**, and then running a lightweight **Bayes + PID** loop, you can turn those signatures into a robust, explainable “door-passed?” signal while keeping stable wall-following.
+
+---
+
+## Features
+
+- **Data → CPTs → Online fusion** pipeline (collect → train → run).  
+- **Naive Bayes** for interpretable inference; **PID** for smooth control.  
+- **Reproducible demo**: generates **plots** and an **Excel-ready CSV**.  
+- Modular folders for **data**, **learned CPTs**, **code**, and **docs**.
+
+---
+
 ## Repo layout
 
 ```text
-TBD
+Doorway-Detection-Robot/
+├─ cpts/ # Learned CPTs (CSV)
+├─ data/ # Raw logs & derived datasets
+├─ docs/ # Notes, figures
+├─ src/ # Python source (collection, training, runtime)
+├─ requirements.txt
+└─ README.md
 ```
+> The code is organized so you can: **collect** measurements, **train** CPTs, then **run** the controller with live or replayed data.
 
 ---
 
-## 0) Prereqs
+## Requirements
 
-- Python 3.10+ (3.11 OK)
-- (Recommended) VS Code with **Python** and **Pylance**.
-  - Note: WSL does not support BLE
+- **Python 3.10+** (3.11 OK).  
+- Recommended: VS Code + Python extension.  
+- **Note for WSL** users: **WSL does not support BLE**; use native Linux/Windows for Bluetooth-based runs.
 
 ---
 
-## 1) Setup & Execution (venv + deps)
+## Install
 
 ```bash
+git clone https://github.com/ggmeiner22/Doorway-Detection-Robot
 cd Doorway-Detection-Robot
+
 python -m venv .venv
+# Windows:
 .\.venv\Scripts\Activate
+# macOS/Linux:
+source .venv/bin/activate
+
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
-# To execute
+---
+
+## Quickstart
+
+**1) Collect data** (drive near a wall; mark/label door events as your script supports):
+
+```bash
 python -m src.scripts.collect
+```
+- This creates/updates raw logs in *data/* (e.g., measurements with labels).
+
+**2) Train CPTS** (learn Naive Bayes tables from your logs):
+
+```bash
 python -m src.scripts.train
+```
+- This writes learned tables to *cpts/*.csv*.
+
+**3) Run** (online fusion + PID):
+
+```bash
 python -m src.scripts.run
 ```
-
----
-
-## 2) What the robot does, step by step
-
----
-
-## 3) Files you will see
-`data/measurements_live.csv` — auto-labeled training data from warm-up.
-
-`cpts/*.csv` — learned BN tables used by control.
-
----
-
-## 4) Stop / rerun
-**Ctrl+C** to stop.
-
-On later runs, you can skip collect and train and reuse CPTs.
-
----
-
-## 5) License
-
-This project is released under the **MIT License**.  
-
-You are free to use, modify, and distribute this code, but attribution is appreciated.  
-Replace the sample data & CPTs with your own robot measurements for your own use.
+- You’ll see plots and a timeseries CSV suitable for spreadsheets.
+  - On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
