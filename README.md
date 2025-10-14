@@ -117,28 +117,49 @@ Key knobs you’ll typically adjust:
 - **PID gains** (Kp/Ki/Kd).
 - **Windowing / temporal features** for the “10 cm ago” door signature.
 - **Signal preprocessing** (e.g., median/EMA smoothing).
-- ***Labeling schema*** for training (consistent, precise timestamps).
+- **Labeling schema** for training (consistent, precise timestamps).
 Store your defaults in a small config file or env vars and keep learned tables in *cpts/*.
 
 ---
 
-##
+## Outputs
 
-
----
-
-##
-
-
----
-
-##
-
+After a run you should expect:
+- *data/measurements_live.csv* – raw or lightly processed measurements with labels (example file name).
+- *cpts/*.csv* – learned CPTs.
+- *data/belief_timeseries.csv* – fused probabilities, expected distance, control outputs.
+- **Plots** – quick visual checks (distance vs. setpoint, door probability spikes).
 
 ---
 
-##
+## How it works (high-level)
+
+1. **Collect**: sample proximity/IR/other signals while wall-following; label door transitions.  
+2. **Train**: fit **Naive Bayes** CPTs from labeled windows (e.g., deltas/ratios, short temporal context).  
+3. **Fuse**: at runtime, compute **P(door_passed | signals)** and a **distance distribution**; use the **expected distance** as the measurement for **PID**.  
+4. **Control**: PID regulates wheel commands to track the setpoint while door probability is monitored for events.
+
+This provides a small, explainable loop that’s easy to tune and iterate with field data.
 
 ---
 
-##
+## Troubleshooting & tips
+
+- **No motion / no control effect**: confirm your velocity publisher/SDK path, and that command topic or device connection is correct for your platform (e.g., Create3: verify message types and namespaces).  
+- **BLE on WSL**: not supported—run on native Windows or Linux for Bluetooth connectivity.  
+- **Noisy signals**: add smoothing (EMA/median), clip outliers, or expand training data with more varied wall materials and door frames.  
+- **Door probability not peaking**: re-check labels and your temporal window (e.g., align the distance-change feature to “~10 cm” of forward travel).  
+- **Reproducibility**: save your raw logs; keep each learning run’s CPTs versioned in `cpts/`.
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
+
+---
+
+### Citation / Acknowledgments
+
+- iRobot® Create® platform interfaces & docs are helpful for message definitions and setup.
+
