@@ -106,4 +106,4 @@ python -m src.scripts.train
 python -m src.scripts.run
 ```
 - You’ll see plots and a timeseries CSV suitable for spreadsheets.
-  - On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
+> On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
