@@ -46,13 +46,48 @@ Door transitions create distinctive short-lived signatures in near-wall sensing.
 ## Repo layout
 
 ```text
-Doorway-Detection-Robot/
-├─ cpts/ # Learned CPTs (CSV)
-├─ data/ # Raw logs & derived datasets
-├─ docs/ # Notes, figures
-├─ src/ # Python source (collection, training, runtime)
-├─ requirements.txt
-└─ README.md
+├── cpts/
+│   ├── cpt*.csv
+│   └── prior_location.csv
+├── data/
+│   ├── measurements_20251013_*.csv
+│   └── predictions_20251013_*.csv
+├── docs/
+│   ├── bayesian_network_description.md
+│   ├── cpts_info.md
+│   ├── data_exports/
+│   │   ├── cpts.zip
+│   │   └── data.zip
+│   ├── images/
+│   │   ├── network.png
+│   │   ├── posterior_rep.png
+│   │   ├── robot-side.jpg
+│   │   ├── robot-top1.jpg
+│   │   ├── robot-top.jpg
+│   │   ├── test-photos
+│   │   └── timeseries.png
+│   ├── project_description.md
+│   ├── robot_description.md
+│   ├── source_code_info.md
+│   ├── team_description.md
+│   └── variables_description.md
+├── index.html
+├── LICENSE
+├── README.md
+├── requirements.txt
+└── src/
+    ├── core/
+    │   ├── belief_network.py
+    │   ├── config.py
+    │   ├── control.py
+    │   ├── cpt_learn.py
+    │   ├── motion.py
+    │   ├── pid.py
+    │   └── robot_io.py
+    └── scripts/
+        ├── collect.py
+        ├── run.py
+        └── train.py
 ```
 > The code is organized so you can: **collect** measurements, **train** CPTs, then **run** the controller with live or replayed data.
 
