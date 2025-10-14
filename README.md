@@ -24,7 +24,6 @@ The repo also includes a small demo that produces plots and a CSV you can open i
 - [Outputs](#outputs)
 - [How it works (high-level)](#how-it-works-high-level)
 - [Troubleshooting & tips](#troubleshooting--tips)
-- [Roadmap](#roadmap)
 - [License](#license)
 
 ---
