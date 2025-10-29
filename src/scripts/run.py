@@ -23,7 +23,8 @@ async def play(robot):
     ensure_dirs()
 
     # Phase 3: control with BN belief for location prediction
-    await run_location_predictor(robot, cpts_dir=CPTS_DIR, door_states=DOOR_STATES, dt=DT)
+    # Set return_home to T or F based on if you want it to stop, turn around, and return back to the start or not
+    await run_location_predictor(robot, cpts_dir=CPTS_DIR, door_states=DOOR_STATES, dt=DT, return_home=True)
 
 
 robot.play()

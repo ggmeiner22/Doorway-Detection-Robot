@@ -16,6 +16,7 @@ from .config import (
 import keyboard
 pose_dtype = np.dtype([("x", np.float64), ("y", np.float64)])
 
+
 async def apply_pid_to_motors(robot: Create3, controller: PID, dist_cm: float, dt: float,
                               wall_side: str, forward: float, max_w: float, min_w: float):
     """Calculates PID output and applies it to the robot's motors."""
@@ -29,12 +30,14 @@ async def apply_pid_to_motors(robot: Create3, controller: PID, dist_cm: float, d
     await robot.set_wheel_speeds(L, R)
     return L, R
 
+
 async def initialize_pid_wall_follower(robot: Create3, setpoint_cm: float, forward: float) -> PID:
     """Initializes PID controller and sets initial robot lights and speed."""
     controller = PID(kp=0.4, ki=0.02, kd=0.1, setpoint=setpoint_cm)
     await robot.set_lights_on_rgb(0, 255, 0)
     await robot.set_wheel_speeds(forward, forward)
     return controller
+
 
 def initialize_history_deques(history_len: int = 9) -> tuple:
     """Initializes and returns a tuple of history deques."""
@@ -44,6 +47,7 @@ def initialize_history_deques(history_len: int = 9) -> tuple:
     pid_d_history = deque([0]*history_len, maxlen=history_len)
     bumper_history = deque([False]*history_len, maxlen=history_len)
     return ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history
+
 
 async def get_label():
     """Asynchronously and non-blockingly waits for a keypress from the user."""
@@ -92,6 +96,7 @@ def update_histories(
     d_binned = discretize_d_10_bins(d_val, setpoint_cm)
     pid_d_history.append(d_binned)
     bumper_history.append(any(bumpers))
+
 
 async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                                setpoint_cm: float = SETPOINT_CM,
@@ -165,7 +170,8 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
         f.close()
         print(f"[collect] saved → {data_csv.resolve()}")
 
-async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: float = DT,
+
+async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: float = DT, return_home: bool = False,
                                  setpoint_cm: float = SETPOINT_CM,
                                  forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
@@ -190,6 +196,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     pred_w.writerow(header)
     pred_f.flush()
 
+    num_of_doors_passed = 0  # Used if return_home is True only
     try:
         while True:
             # Get sensor data
@@ -240,7 +247,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                         print(f"    - {location}: {probability:.4f}")
                 else:
                     print("Could not calculate location belief.")
-
+                
                 # Door passed 10cm ago prediction
                 if last_belief:
                     p_ago = sum(last_belief["posterior"].get(s, 0.0) for s in door_states)
@@ -248,6 +255,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 door_passed_decision = "NO"
                 if p_ago > 0.6:
                     door_passed_decision = "YES"
+                    num_of_doors_passed += 1
                     print("  DECISION: YES, a door was passed ~10cm ago.")
                 else:
                     print("  DECISION: NO, a door was not passed ~10cm ago.")
@@ -272,6 +280,12 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
 
                 last_belief = b
                 distance_since_last_prediction = 0
+
+                # If we are turning back to come home
+                if return_home:
+                    if num_of_doors_passed == 3:
+                        # Add func here and remove pass
+                        pass
 
             await asyncio.sleep(dt)
 
