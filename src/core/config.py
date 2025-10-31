@@ -21,7 +21,7 @@ IR_SENSOR_IDX = RIGHT_IR_IDX if WALL_SIDE == 'right' else LEFT_IR_IDX
 HZ            = 10.0
 DT            = 1.0 / HZ
 SETPOINT_CM   = 6.0
-FORWARD       = 10
+FORWARD       = 12
 STOP          = 0
 MAX_W, MIN_W  = 21, 1
 
@@ -34,6 +34,12 @@ AUTO_MIN_DOOR_SAMPLES = 5
 AUTO_REFRACTORY_STEPS = 10
 AUTO_EWMA_ALPHA = 0.12
 AUTO_EWVAR_ALPHA = 0.08
+
+# --- Turn Around ---
+YAW_DEG_PER_SEC = 120.0
+HOME_RADIUS  = 20.0
+DECEL_RADIUS = 50.0
+
 
 # control & detection
 DOOR_TRIGGER = 0.60          # slows + magenta if belief exceeds this
