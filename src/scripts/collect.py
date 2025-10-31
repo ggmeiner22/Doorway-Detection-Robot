@@ -3,7 +3,7 @@ from irobot_edu_sdk.robots import event
 from irobot_edu_sdk.music import Note
 from irobot_edu_sdk.backend.bluetooth import Bluetooth
 from irobot_edu_sdk.robots import Create3
-from src.core.config import CPTS_DIR, DT, ROBOT_NAME, ensure_dirs, DOOR_STATES, DATA_CSV
+from src.core.config import ROBOT_NAME, ensure_dirs, DATA_CSV
 from src.core.control import collect_data_manual
 from src.core.motion import backoff_right, backoff_left
 

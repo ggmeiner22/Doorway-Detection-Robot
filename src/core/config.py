@@ -22,6 +22,7 @@ HZ            = 10.0
 DT            = 1.0 / HZ
 SETPOINT_CM   = 6.0
 FORWARD       = 10
+STOP          = 0
 MAX_W, MIN_W  = 21, 1
 
 # --- warm-up control + auto logging ---

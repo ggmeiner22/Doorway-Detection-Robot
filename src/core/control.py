@@ -5,12 +5,10 @@ from collections import deque
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
 from .robot_io import prox_to_cm, cm_to_bin12, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins
-from .belief_network import belief, door_passed_10cm_ago
+from .belief_network import belief
 from .config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, IR_SENSOR_IDX, WALL_SIDE,
-    DOOR_STATES, CPTS_DIR, FEATURES, WARMUP_SECONDS,
-    AUTO_K_RISE, AUTO_K_FALL, AUTO_MIN_RISE_SAMPLES, AUTO_MIN_DOOR_SAMPLES,
-    AUTO_REFRACTORY_STEPS, AUTO_EWMA_ALPHA, AUTO_EWVAR_ALPHA
+    FEATURES, STOP
 )
 
 import keyboard
@@ -282,10 +280,14 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 distance_since_last_prediction = 0
 
                 # If we are turning back to come home
-                if return_home:
-                    if num_of_doors_passed == 3:
-                        # Add func here and remove pass
-                        pass
+                if return_home and num_of_doors_passed == 3:
+                    # Stop robot
+                    await robot.set_wheel_speeds(STOP, STOP)
+                    # Turn robot around
+                    # Invert sensors
+                    # Invert PID Control
+                    # move forward
+                    pass
 
             await asyncio.sleep(dt)
 
