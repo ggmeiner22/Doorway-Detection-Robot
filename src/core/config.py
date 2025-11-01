@@ -47,8 +47,8 @@ CM_PER_STEP = 1.0            # for "10 cm ago" (≈10 cycles at 10 Hz)
 
 
 # Prefer explicit MAC via env; fallback to default advertised name
-ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-030")
-#ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot_25")
+#ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-030")
+ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot_25")
 #ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-88FA7A7E3FCC461E8B675C")
 #ROBOT_NAME   = os.environ.get("IROBOT_NAME", "iRobot-030F9BF3B40449DC94031C")
 
