@@ -344,7 +344,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 distance_since_last_prediction = 0
 
                 # If we are turning back to come home
-                if return_home and num_of_doors_passed == 1:
+                if return_home and num_of_doors_passed == 3:
                     # Stop robot
                     await robot.set_wheel_speeds(STOP, STOP)
                     await asyncio.sleep(2)
