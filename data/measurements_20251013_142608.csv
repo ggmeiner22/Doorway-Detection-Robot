@@ -17,7 +17,7 @@ Door,5,6,6,6,6,3,6,5,4,5,4,4,4,4,6,4,5,6,6,0,9,9,9,9,9,9,9,4,4,4,4,4,4,4,4,5,Fal
 Door,6,6,6,6,3,6,5,4,4,4,4,4,4,6,4,5,6,6,0,9,9,9,9,9,9,9,6,4,4,4,4,4,4,4,5,6,False,False,False,False,False,False,False,False,False
 Door,6,6,6,3,6,5,4,4,4,4,4,4,6,4,5,6,6,6,9,9,9,9,9,9,9,6,0,4,4,4,4,4,4,5,6,6,False,False,False,False,False,False,False,False,False
 Door_Passed,6,6,3,6,5,4,4,4,5,4,4,6,4,5,6,6,6,5,9,9,9,9,9,9,6,0,0,4,4,4,4,4,5,6,6,7,False,False,False,False,False,False,False,False,False
-Door_Passed,6,3,6,5,4,4,4,5,2,4,6,4,5,6,6,6,5,7,9,9,9,9,9,6,0,0,9,4,4,4,4,5,6,6,7,8,False,False,False,False,False,False,False,False,False
+Wall,6,3,6,5,4,4,4,5,2,4,6,4,5,6,6,6,5,7,9,9,9,9,9,6,0,0,9,4,4,4,4,5,6,6,7,8,False,False,False,False,False,False,False,False,False
 Wall,3,6,5,4,4,4,5,2,9,6,4,5,6,6,6,5,7,2,9,9,9,9,6,0,0,9,0,4,4,4,5,6,6,7,8,9,False,False,False,False,False,False,False,False,False
 Wall,6,5,4,4,4,5,2,9,8,4,5,6,6,6,5,7,2,3,9,9,9,6,0,0,9,0,9,4,4,5,6,6,7,8,9,7,False,False,False,False,False,False,False,False,False
 Wall,5,4,4,4,5,2,9,8,7,5,6,6,6,5,7,2,3,3,9,9,6,0,0,9,0,9,9,4,5,6,6,7,8,9,7,6,False,False,False,False,False,False,False,False,False
@@ -88,7 +88,7 @@ Door,4,4,3,8,7,7,7,6,5,6,6,7,3,3,3,3,4,5,9,9,9,0,0,9,9,9,9,0,0,0,0,0,0,0,0,0,Fal
 Door,4,3,8,7,7,7,6,5,4,6,7,3,3,3,3,4,5,6,9,9,0,0,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Door,3,8,7,7,7,6,5,4,4,7,3,3,3,3,4,5,6,6,9,0,0,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Door_Passed,8,7,7,7,6,5,4,4,3,3,3,3,3,4,5,6,6,6,0,0,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
-Door_Passed,7,7,7,6,5,4,4,3,1,3,3,3,4,5,6,6,6,9,0,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
+Wall,7,7,7,6,5,4,4,3,1,3,3,3,4,5,6,6,6,9,0,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,7,7,6,5,4,4,3,1,1,3,3,4,5,6,6,6,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,7,6,5,4,4,3,1,1,2,3,4,5,6,6,6,9,9,7,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,6,5,4,4,3,1,1,2,4,4,5,6,6,6,9,9,7,6,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False

@@ -18,7 +18,7 @@ Door,6,6,6,5,9,8,7,6,6,4,4,4,5,2,3,3,4,4,0,0,9,9,0,9,9,9,9,4,4,3,3,4,2,1,1,0,Fal
 Door,6,6,5,9,8,7,6,6,5,4,4,5,2,3,3,4,4,5,0,9,9,0,9,9,9,9,9,4,3,3,4,2,1,1,0,1,False,False,False,False,False,False,False,False,False
 Door,6,5,9,8,7,6,6,5,5,4,5,2,3,3,4,4,5,5,9,9,0,9,9,9,9,9,9,3,3,4,2,1,1,0,1,1,False,False,False,False,False,False,False,False,False
 Door_Passed,5,9,8,7,6,6,5,5,4,5,2,3,3,4,4,5,5,6,9,0,9,9,9,9,9,9,9,3,4,2,1,1,0,1,1,2,False,False,False,False,False,False,False,False,False
-Door_Passed,9,8,7,6,6,5,5,4,1,2,3,3,4,4,5,5,6,9,0,9,9,9,9,9,9,9,9,4,2,1,1,0,1,1,2,4,False,False,False,False,False,False,False,False,True
+Wall,9,8,7,6,6,5,5,4,1,2,3,3,4,4,5,5,6,9,0,9,9,9,9,9,9,9,9,4,2,1,1,0,1,1,2,4,False,False,False,False,False,False,False,False,True
 Wall,8,7,6,6,5,5,4,1,2,3,3,4,4,5,5,6,9,7,9,9,9,9,9,9,9,9,9,2,1,1,0,1,1,2,4,3,False,False,False,False,False,False,False,True,False
 Wall,7,6,6,5,5,4,1,2,5,3,4,4,5,5,6,9,7,5,9,9,9,9,9,9,9,9,9,1,1,0,1,1,2,4,3,3,False,False,False,False,False,False,True,False,False
 Wall,6,6,5,5,4,1,2,5,6,4,4,5,5,6,9,7,5,4,9,9,9,9,9,9,9,9,2,1,0,1,1,2,4,3,3,3,False,False,False,False,False,True,False,False,False
@@ -83,7 +83,7 @@ Door,5,6,6,5,9,8,7,6,5,5,4,4,5,2,2,3,4,5,0,1,5,9,0,9,9,9,9,4,4,4,4,4,3,2,1,1,Fal
 Door,6,6,5,9,8,7,6,5,5,4,4,5,2,2,3,4,5,5,1,5,9,0,9,9,9,9,9,4,4,4,4,3,2,1,1,1,False,False,False,False,False,False,False,False,False
 Door,6,5,9,8,7,6,5,5,4,4,5,2,2,3,4,5,5,5,5,9,0,9,9,9,9,9,9,4,4,4,3,2,1,1,1,2,False,False,False,False,False,False,False,False,False
 Door_Passed,5,9,8,7,6,5,5,4,3,5,2,2,3,4,5,5,5,7,9,0,9,9,9,9,9,9,9,4,4,3,2,1,1,1,2,3,False,False,False,False,False,False,False,False,False
-Door_Passed,9,8,7,6,5,5,4,3,9,2,2,3,4,5,5,5,7,2,0,9,9,9,9,9,9,9,0,4,3,2,1,1,1,2,3,3,False,False,False,False,False,False,False,False,False
+Wall,9,8,7,6,5,5,4,3,9,2,2,3,4,5,5,5,7,2,0,9,9,9,9,9,9,9,0,4,3,2,1,1,1,2,3,3,False,False,False,False,False,False,False,False,False
 Wall,8,7,6,5,5,4,3,9,8,2,3,4,5,5,5,7,2,2,9,9,9,9,9,9,9,0,9,3,2,1,1,1,2,3,3,1,False,False,False,False,False,False,False,False,False
 Door_Start,7,6,5,5,4,3,9,8,6,3,4,5,5,5,7,2,2,4,9,9,9,9,9,9,0,9,9,2,1,1,1,2,3,3,1,0,False,False,False,False,False,False,False,False,False
 Door,6,5,5,4,3,9,8,6,8,4,5,5,5,7,2,2,4,3,9,9,9,9,9,0,9,9,0,1,1,1,2,3,3,1,0,0,False,False,False,False,False,False,False,False,False
@@ -94,7 +94,7 @@ Door,3,9,8,6,8,7,6,6,5,7,2,2,4,3,3,4,4,5,9,0,9,9,0,9,9,9,9,3,3,1,0,0,0,0,0,0,Fal
 Door,9,8,6,8,7,6,6,5,4,2,2,4,3,3,4,4,5,6,0,9,9,0,9,9,9,9,9,3,1,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Door,8,6,8,7,6,6,5,4,4,2,4,3,3,4,4,5,6,6,9,9,0,9,9,9,9,9,6,1,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Door_Passed,6,8,7,6,6,5,4,4,3,4,3,3,4,4,5,6,6,7,9,0,9,9,9,9,9,6,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
-Door_Passed,8,7,6,6,5,4,4,3,5,3,3,4,4,5,6,6,7,5,0,9,9,9,9,9,6,9,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
+Wall,8,7,6,6,5,4,4,3,5,3,3,4,4,5,6,6,7,5,0,9,9,9,9,9,6,9,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,7,6,6,5,4,4,3,5,4,3,4,4,5,6,6,7,5,6,9,9,9,9,9,6,9,0,9,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,6,6,5,4,4,3,5,4,4,4,4,5,6,6,7,5,6,6,9,9,9,9,6,9,0,9,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False
 Wall,6,5,4,4,3,5,4,4,5,4,5,6,6,7,5,6,6,5,9,9,9,6,9,0,9,0,0,0,0,0,0,0,0,0,0,0,False,False,False,False,False,False,False,False,False

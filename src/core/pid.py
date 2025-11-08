@@ -17,3 +17,8 @@ class PID:
         self._prev_prev = self._prev
         self._prev = error
         return self.kp*error + self.ki*self._integ + self.kd*deriv
+
+    def reset(self):
+        self._integ = 0.0
+        self._prev = None
+        self._prev_prev = None

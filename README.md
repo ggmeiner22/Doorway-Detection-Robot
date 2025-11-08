@@ -71,6 +71,8 @@ Door transitions create distinctive short-lived signatures in near-wall sensing.
 │   ├── source_code_info.md
 │   ├── team_description.md
 │   └── variables_description.md
+├── logs/
+│    └── predictor.log
 ├── index.html
 ├── LICENSE
 ├── README.md
@@ -95,7 +97,7 @@ Door transitions create distinctive short-lived signatures in near-wall sensing.
 
 ## Requirements
 
-- **Python 3.10+** (3.11 OK).  
+- **Python 3.10+**  
 - Recommended: VS Code + Python extension.  
 - **Note for WSL** users: **WSL does not support BLE**; use native Linux/Windows for Bluetooth-based runs.
 
@@ -141,6 +143,8 @@ python -m src.scripts.run
 ```
 - You’ll see plots and a timeseries CSV suitable for spreadsheets.
 > On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
+- In order to activate home functionality, set return_home=True in run_location_predictor function in src/scripts/run.py
+- When active, will stop after 3 doors have been passed, turns around, and wall follows home, stopping around where it started.
 
 ---
 
