@@ -268,6 +268,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 await asyncio.sleep(dt)
                 continue
 
+            IR_SENSOR_IDX = RIGHT_IR_IDX if wall_side == 'right' else LEFT_IR_IDX
             d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX]) 
             d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
