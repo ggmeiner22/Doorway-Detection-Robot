@@ -256,7 +256,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 else: # 'left'
                     await robot.turn_right(25)
                 # After backing off, reset controller and histories to avoid PID wind-up from the bump
-                # controller.reset()
+                controller.reset()
                 # ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
                 logger.info("Resuming wall following.")
                 continue
