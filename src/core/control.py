@@ -237,16 +237,30 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     pred_f.flush()
 
     num_of_doors_passed = 0  # Used if return_home is True only
+
     try:
         while True:
             # decide which IR sensor corresponds to the wall we're following
-            sensor_idx = RIGHT_IR_IDX if wall_side == "right" else LEFT_IR_IDX
-
-            # Get sensor data
             pm1 = await robot.get_ir_proximity()
             await asyncio.sleep(0.05)
             pm2 = await robot.get_ir_proximity()
             bumpers = await robot.get_bumpers()
+
+            if any(bumpers):
+                left_hit, right_hit = bumpers
+                logger.info(f"Bumper hit: left={left_hit}, right={right_hit}, wall_side: {wall_side}. Backing off.")
+                await robot.set_wheel_speeds(0,0)
+                await robot.move(-10)
+                if wall_side == 'right':
+                    await robot.turn_left(25)
+                else: # 'left'
+                    await robot.turn_right(25)
+                # After backing off, reset controller and histories to avoid PID wind-up from the bump
+                # controller.reset()
+                # ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
+                logger.info("Resuming wall following.")
+                continue
+
             pose = await robot.get_position()
             pos = np.array((pose.x, pose.y), dtype=pose_dtype)
 
@@ -254,8 +268,8 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                 await asyncio.sleep(dt)
                 continue
 
-            d1 = prox_to_cm(pm1.sensors[sensor_idx]) 
-            d2 = prox_to_cm(pm2.sensors[sensor_idx])
+            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX]) 
+            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
             dist_cm = 0.5*(d1+d2)
             
             # --- homing control (only after we've turned around) ---

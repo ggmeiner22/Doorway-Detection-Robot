@@ -6,13 +6,13 @@ async def forward(robot):
 async def backoff_left(robot):
     await robot.set_lights_on_rgb(255, 80, 0)
     await robot.move(-10)           # units: confirm cm vs mm
-    await robot.turn_left(20)
+    await robot.turn_right(20)
     #await robot.forward
 
 async def backoff_right(robot):
     await robot.set_lights_on_rgb(255, 80, 0)
     await robot.move(-10)
-    await robot.turn_left(20)      # Test with turn_right vs turn_left
+    await robot.turn_left(20)
     #await robot.forward
     
 def front_obstacle_cm(sensors, approx):
