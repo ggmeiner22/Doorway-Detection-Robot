@@ -617,7 +617,7 @@
             const renderMarkdown = (filePath, elementId) => {
                 const element = document.getElementById(elementId);
                 if (element) {
-                    fetch(filePath)
+                    fetch(`${filePath}?v=${new Date().getTime()}`)
                         .then(response => response.ok ? response.text() : Promise.reject('File not found'))
                         .then(text => {
                             element.innerHTML = marked.parse(text);
