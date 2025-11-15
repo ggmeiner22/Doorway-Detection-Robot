@@ -62,3 +62,25 @@ def discretize_d_10_bins(derivative_val: float, setpoint: float) -> int:
     norm_val = (clamped_val / (2 * T)) + 0.5
     binned_val = int(norm_val * 10)
     return max(0, min(binned_val, 9))
+
+def discretize_odo(delta_dist: float) -> int:
+    """Discretizes a distance in cm into 4 bins."""
+    if delta_dist < 9:
+        return 0
+    elif delta_dist < 10:
+        return 1
+    elif delta_dist < 11:
+        return 2
+    else:
+        return 3
+
+def discretize_odo(delta_dist: float) -> int:
+    """Discretizes a distance in cm into 4 bins."""
+    if delta_dist < 2:
+        return 0
+    elif delta_dist < 5:
+        return 1
+    elif delta_dist < 10:
+        return 2
+    else:
+        return 3

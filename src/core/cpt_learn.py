@@ -2,7 +2,70 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 from collections import Counter
-from .config import LOCATIONS, FEATURES
+from .config import LOCATIONS, FEATURES, POMDP_FEATURES
+
+def get_possible_values_pomdp():
+    values = {}
+    for f in POMDP_FEATURES:
+        if f.startswith("IR"):
+            values[f] = list(range(12))
+        elif f.startswith("PIDP") or f.startswith("PIDI") or f.startswith("PIDD"):
+            values[f] = list(range(10))
+        elif f.startswith("BI"):
+            values[f] = [0, 1]  # For False/True
+        elif f.startswith("ODO"):
+            values[f] = list(range(4))
+    return values
+
+def learn_cpts_from_rows_pomdp(rows: list[dict], out_dir: Path, smoothing: float = 1.0):
+    if not rows: raise RuntimeError("No rows to learn from.")
+
+    values = get_possible_values_pomdp()
+
+    prior = Counter(r["location"] for r in rows)
+    total = sum(prior.values()) + smoothing*len(LOCATIONS)
+    prior_sm = {loc: (prior.get(loc,0)+smoothing)/total for loc in LOCATIONS}
+
+    cond = {f: {loc: Counter() for loc in LOCATIONS} for f in POMDP_FEATURES}
+    count_loc = Counter()
+    for r in rows:
+        loc = r["location"]; count_loc[loc]+=1
+        for f in POMDP_FEATURES:
+            val_str = r[f]
+            if f.startswith("BI"):
+                val = 1 if val_str == 'True' else 0
+            else:
+                val = float(val_str)
+            cond[f][loc][val] += 1
+
+    for f in POMDP_FEATURES:
+        for loc in LOCATIONS:
+            denom = count_loc.get(loc,0)
+            if smoothing == 0:
+                if denom == 0:
+                    num_values = len(values[f])
+                    for v in values[f]:
+                        cond[f][loc][v] = 1.0 / num_values if num_values > 0 else 0
+                    continue
+                for v in values[f]:
+                    cond[f][loc][v] = cond[f][loc].get(v, 0) / denom
+            else:
+                denom += smoothing*len(values[f])
+                for v in values[f]:
+                    num = cond[f][loc].get(v,0) + smoothing
+                    cond[f][loc][v] = num/denom
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir/"prior_location.csv").open("w", newline="", encoding="utf-8") as g:
+        w = csv.writer(g); w.writerow(["location","p"])
+        for loc in LOCATIONS: w.writerow([loc, prior_sm[loc]])
+    for f in POMDP_FEATURES:
+        with (out_dir/f"cpt_{f}.csv").open("w", newline="", encoding="utf-8") as g:
+            w = csv.writer(g); w.writerow(["value"] + LOCATIONS)
+            for v in values[f]:
+                w.writerow([v] + [cond[f][loc].get(v, 0.0) for loc in LOCATIONS])
+    print(f"[train] CPTs written → {out_dir.resolve()}")
+
 
 def get_possible_values():
     values = {}

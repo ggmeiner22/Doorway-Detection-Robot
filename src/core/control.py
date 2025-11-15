@@ -6,11 +6,11 @@ import numpy as np
 from collections import deque
 from irobot_edu_sdk.robots import Create3
 from .pid import PID
-from .robot_io import prox_to_cm, cm_to_bin12, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins
+from .robot_io import prox_to_cm, cm_to_bin12, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins, discretize_odo
 from .belief_network import belief
 from .config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, IR_SENSOR_IDX, WALL_SIDE,
-    FEATURES, STOP, YAW_DEG_PER_SEC, RIGHT_IR_IDX, LEFT_IR_IDX,  CPTS_DIR,
+    FEATURES, POMDP_FEATURES, STOP, YAW_DEG_PER_SEC, RIGHT_IR_IDX, LEFT_IR_IDX,  CPTS_DIR,
     HOME_RADIUS, DECEL_RADIUS
 )
 
@@ -129,6 +129,45 @@ def update_histories(
     bumper_history.append(any(bumpers))
 
 
+async def wall_follow_step(robot: Create3, controller: PID, wall_side: str, forward: float, max_w: float, min_w: float, dt: float):
+    """A single step of wall following, to be used by both collect and run."""
+    pm1 = await robot.get_ir_proximity()
+    await asyncio.sleep(0.05)
+    pm2 = await robot.get_ir_proximity()
+    bumpers = await robot.get_bumpers()
+
+    if any(bumpers):
+        left_hit, right_hit = bumpers
+        logger.info(f"Bumper hit: left={left_hit}, right={right_hit}, wall_side: {wall_side}. Backing off.")
+        await robot.set_wheel_speeds(0,0)
+        await robot.move(-10)
+        if wall_side == 'right':
+            await robot.turn_left(25)
+        else: # 'left'
+            await robot.turn_right(25)
+        # After backing off, reset controller and histories to avoid PID wind-up from the bump
+        controller.reset()
+        # ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
+        logger.info("Resuming wall following.")
+        return None, None, None
+
+    pose = await robot.get_position()
+
+    if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pose is None:
+        await asyncio.sleep(dt)
+        return None, None, None
+
+    IR_SENSOR_IDX = RIGHT_IR_IDX if wall_side == 'right' else LEFT_IR_IDX
+    d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
+    d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
+    dist_cm = 0.5*(d1+d2)
+
+    await apply_pid_to_motors(robot, controller, dist_cm, dt,
+                              wall_side, forward, max_w, min_w)
+
+    return dist_cm, bumpers, pose
+
+
 async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                                setpoint_cm: float = SETPOINT_CM,
                                forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
@@ -154,28 +193,15 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
 
     try:
         while not keyboard.is_pressed('q'):
-            # Get sensor data
-            pm1 = await robot.get_ir_proximity()
-            await asyncio.sleep(0.05)
-            pm2 = await robot.get_ir_proximity()
-            bumpers = await robot.get_bumpers()
-            pose = await robot.get_position()
-            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
-
-            if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pos is None or last_pos is None:
-                await asyncio.sleep(dt)
+            dist_cm, bumpers, pose = await wall_follow_step(robot, controller, wall_side, forward, max_w, min_w, dt)
+            if dist_cm is None:
                 continue
 
-            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX])
-            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
-            dist_cm = 0.5*(d1+d2)
-            
-            L, R = await apply_pid_to_motors(robot, controller, dist_cm, dt,
-                                             wall_side, forward, max_w, min_w)
+            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
 
             # Manual annotation
             distance_since_last_prompt += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
-            
+
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
                 if label is not None:
@@ -187,13 +213,12 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
                 else:
                     label = await get_label()
 
-                update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
-                dist_cm, controller, bumpers, dt, setpoint_cm)
-
                 distance_since_last_prompt = 0
 
-            logger.info(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} L,R=({L:.1f},{R:.1f}) distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
-            #logger.info (f"pos.x = {pos["x"]}, pos.y = {pos["y"]},  last_pos.x = {last_pos["x"]}, last_pos.y = {last_pos["y"]}")
+            update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
+            dist_cm, controller, bumpers, dt, setpoint_cm)
+
+            logger.info(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
             last_pos = pos.copy()
             await asyncio.sleep(dt)
 
@@ -203,7 +228,7 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
         logger.info(f"[collect] saved → {data_csv.resolve()}")
 
 
-async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: float = DT, return_home: bool = False,
+async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, belief_func=belief, dt: float = DT, return_home: bool = False,
                                  setpoint_cm: float = SETPOINT_CM,
                                  forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
@@ -212,7 +237,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
     ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
     wall_side = WALL_SIDE # Localize the variable
-    
+
     last_belief = None
     distance_since_last_prediction = 0
     pose = await robot.get_position()
@@ -227,12 +252,12 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
     # --- CSV setup for predictions ---
     timestamp_str = time.strftime("%Y%m%d_%H%M%S")
     data_dir = cpts_dir.parent / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)   
+    data_dir.mkdir(parents=True, exist_ok=True)
     predictions_csv_path = data_dir / f"predictions_{timestamp_str}.csv"
 
     pred_f = predictions_csv_path.open("w", newline="", encoding="utf-8")
     pred_w = csv.writer(pred_f)
-    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm"]
+    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm", "Doors_Passed"]
     pred_w.writerow(header)
     pred_f.flush()
 
@@ -240,50 +265,23 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
 
     try:
         while True:
-            # decide which IR sensor corresponds to the wall we're following
-            pm1 = await robot.get_ir_proximity()
-            await asyncio.sleep(0.05)
-            pm2 = await robot.get_ir_proximity()
-            bumpers = await robot.get_bumpers()
-
-            if any(bumpers):
-                left_hit, right_hit = bumpers
-                logger.info(f"Bumper hit: left={left_hit}, right={right_hit}, wall_side: {wall_side}. Backing off.")
-                await robot.set_wheel_speeds(0,0)
-                await robot.move(-10)
-                if wall_side == 'right':
-                    await robot.turn_left(25)
-                else: # 'left'
-                    await robot.turn_right(25)
-                # After backing off, reset controller and histories to avoid PID wind-up from the bump
-                controller.reset()
-                # ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history = initialize_history_deques()
-                logger.info("Resuming wall following.")
+            dist_cm, bumpers, pose = await wall_follow_step(robot, controller, wall_side, forward, max_w, min_w, dt)
+            if dist_cm is None:
                 continue
 
-            pose = await robot.get_position()
             pos = np.array((pose.x, pose.y), dtype=pose_dtype)
 
-            if pm1 is None or pm1.sensors is None or pm2 is None or pm2.sensors is None or pos is None or last_pos is None:
-                await asyncio.sleep(dt)
-                continue
-
-            IR_SENSOR_IDX = RIGHT_IR_IDX if wall_side == 'right' else LEFT_IR_IDX
-            d1 = prox_to_cm(pm1.sensors[IR_SENSOR_IDX]) 
-            d2 = prox_to_cm(pm2.sensors[IR_SENSOR_IDX])
-            dist_cm = 0.5*(d1+d2)
-            
             # --- homing control (only after we've turned around) ---
             speed_scale = 1.0
             if returning:
                 # distance from current position to start
                 dist_home = float(np.hypot(pos["x"] - start_xy["x"], pos["y"] - start_xy["y"]))
-            
+
                 # Gentle decel as we approach home
                 if dist_home < DECEL_RADIUS:
                     # scale forward speed (down to ~30% near HOME_RADIUS)
                     speed_scale = max(0.3, min(1.0, dist_home / DECEL_RADIUS))
-            
+
                 # if we’re “home”, stop and exit
                 if dist_home <= HOME_RADIUS:
                     logger.info(f"[predictor] Reached home (≈{dist_home:.1f} units). Stopping.")
@@ -291,23 +289,27 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                     await asyncio.sleep(1)
                     break
 
-            await apply_pid_to_motors(robot, controller, dist_cm, dt,
-                                      wall_side, forward * speed_scale, max_w, min_w)
-
             update_histories(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history,
-                             dist_cm, controller, bumpers, dt, setpoint_cm)
-
+                                dist_cm, controller, bumpers, dt, setpoint_cm)
             # Create readings dictionary from history for belief calculation
             all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
             readings = {feature: value for feature, value in zip(FEATURES, all_history)}
-            b = belief(readings, {"cpts_dir": str(cpts_dir), "door_states": door_states})
+            
+            import inspect
+            sig = inspect.signature(belief_func)
+            if 'last_belief' in sig.parameters:
+                b = belief_func(readings, last_belief['posterior'] if last_belief else None, {"cpts_dir": str(cpts_dir), "door_states": door_states})
+            else:
+                b = belief_func(readings, {"cpts_dir": str(cpts_dir), "door_states": door_states})
 
             distance_since_last_prediction += (((pos["x"] - last_pos["x"])**2 + (pos["y"] - last_pos["y"])**2)**0.5)
             last_pos = pos.copy()
 
             if distance_since_last_prediction >= 10:
+                await robot.set_wheel_speeds(0, 0)
+                await asyncio.sleep(1)
                 logger.info("\n--- PREDICTIONS ---")
-                
+
                 # --- Initialize variables for this prediction cycle ---
                 predicted_location = "N/A"
                 p_ago = 0.0
@@ -323,19 +325,16 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                         logger.info(f"    - {location}: {probability:.4f}")
                 else:
                     logger.info("Could not calculate location belief.")
-                
+
                 # Door passed 10cm ago prediction
                 if last_belief:
                     p_ago = sum(last_belief["posterior"].get(s, 0.0) for s in door_states)
-                logger.info(f"\nProbability of having passed a door 10cm ago: {p_ago:.4f}")
                 door_passed_decision = "NO"
                 if p_ago > 0.6:
                     door_passed_decision = "YES"
                     num_of_doors_passed += 1
-                    logger.info("  DECISION: YES, a door was passed ~10cm ago.")
-                    logger.info(f"Doors passed so far: {num_of_doors_passed}")
-                else:
-                    logger.info("  DECISION: NO, a door was not passed ~10cm ago.")
+                
+                logger.info(f"Doors passed so far: {num_of_doors_passed}")
 
                 # Distance from wall prediction
                 p_distance_bins = b.get("p_distance_bins", {})
@@ -344,15 +343,14 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                     logger.info(f"\nPredicted Distance from Wall: {expected_cm:.1f} cm")
                     logger.info("  Distance Distribution (0-12 cm):")
                     for bin_idx, prob in sorted(p_distance_bins.items()):
-                        if prob > 0.01: # Only logger.info significant probabilities
-                            logger.info(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
+                        logger.info(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
                 else:
                     logger.info("Could not calculate distance distribution.")
-                
+
                 logger.info("-------------------\n")
 
                 # --- Write to CSV ---
-                pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm])
+                pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm, num_of_doors_passed])
                 pred_f.flush()
 
                 last_belief = b
@@ -372,7 +370,7 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
                     logger.info(f"[predictor] Turned 180°, now following {wall_side} wall")
                     returning = True
                     return_home = False
-            
+
             await asyncio.sleep(dt)
 
     finally:
@@ -380,6 +378,254 @@ async def run_location_predictor(robot: Create3, *, cpts_dir, door_states, dt: f
         pred_f.close()
         logger.info(f"\n[predictor] Predictions saved to {predictions_csv_path.resolve()}")
 
+
+def initialize_history_deques_pomdp(history_len: int = 9) -> tuple:
+    """Initializes and returns a tuple of history deques for POMDP."""
+    ir_history = deque([0]*history_len, maxlen=history_len)
+    pid_p_history = deque([0]*history_len, maxlen=history_len)
+    pid_i_history = deque([0]*history_len, maxlen=history_len)
+    pid_d_history = deque([0]*history_len, maxlen=history_len)
+    bumper_history = deque([False]*history_len, maxlen=history_len)
+    odo_history = deque([0]*history_len, maxlen=history_len)
+    return ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history
+
+
+def update_histories_pomdp(
+    ir_history: deque,
+    pid_p_history: deque,
+    pid_i_history: deque,
+    pid_d_history: deque,
+    bumper_history: deque,
+    odo_history: deque,
+    dist_cm: float,
+    controller: PID,
+    bumpers,
+    dt: float,
+    setpoint_cm: float,
+    delta_dist: float
+):
+    """Updates all history deques with new sensor data for POMDP."""
+    ir_history.append(cm_to_bin12(dist_cm))
+    p_binned = discretize_p_10_bins(dist_cm, setpoint_cm)
+    pid_p_history.append(p_binned)
+    i_val = controller._integ
+    i_binned = discretize_i_10_bins(i_val, setpoint_cm)
+    pid_i_history.append(i_binned)
+    d_val = 0.0
+    if controller._prev is not None and controller._prev_prev is not None:
+        d_val = (controller._prev - controller._prev_prev) / dt
+    d_binned = discretize_d_10_bins(d_val, setpoint_cm)
+    pid_d_history.append(d_binned)
+    bumper_history.append(any(bumpers))
+    odo_history.append(discretize_odo(delta_dist))
+
+
+async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
+                               setpoint_cm: float = SETPOINT_CM,
+                               forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
+    """
+    Wall-follows, and collects time-shifted data with manual annotation for POMDP.
+    """
+    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
+    ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history = initialize_history_deques_pomdp()
+    wall_side = WALL_SIDE # Localize the var
+
+    # CSV setup
+    new_file = not data_csv.exists()
+    f = data_csv.open("a", newline="", encoding="utf-8")
+    w = csv.writer(f)
+    if new_file:
+        w.writerow(["location"] + POMDP_FEATURES)
+
+    label = None
+
+    distance_since_last_prompt = 0
+    pose = await robot.get_position()
+    last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+
+    try:
+        while not keyboard.is_pressed('q'):
+            dist_cm, bumpers, pose = await wall_follow_step(robot, controller, wall_side, forward, max_w, min_w, dt)
+            if dist_cm is None:
+                continue
+
+            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+            delta_dist = float(np.hypot(pos["x"] - last_pos["x"], pos["y"] - last_pos["y"]))
+
+            # Manual annotation
+            distance_since_last_prompt += delta_dist
+
+            if distance_since_last_prompt >= 10:
+                await robot.set_wheel_speeds(0, 0)
+                if label is not None:
+                    label = await get_label()
+                    # Write to CSV
+                    row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history)
+                    w.writerow(row)
+                    f.flush()
+                else:
+                    label = await get_label()
+
+                distance_since_last_prompt = 0
+
+            update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
+            dist_cm, controller, bumpers, dt, setpoint_cm, delta_dist)
+
+            logger.info(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} odo_bin={odo_history[-1]} distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
+            last_pos = pos.copy()
+            await asyncio.sleep(dt)
+
+    finally:
+        await robot.set_wheel_speeds(0, 0)
+        f.close()
+        logger.info(f"[collect] saved → {data_csv.resolve()}")
+
+
+async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states, belief_func, dt: float = DT, return_home: bool = False,
+                                 setpoint_cm: float = SETPOINT_CM,
+                                 forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
+    """
+    Wall-follows, and predicts location every 10cm, saving predictions to a CSV file.
+    """
+    controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
+    ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history = initialize_history_deques_pomdp()
+    wall_side = WALL_SIDE # Localize the variable
+
+    last_belief = None
+    distance_since_last_prediction = 0
+    pose = await robot.get_position()
+    last_pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+
+    # remember where we started
+    start_pose = await robot.get_position()
+    start_xy = np.array((start_pose.x, start_pose.y), dtype=pose_dtype)
+    returning = False     # set True after the 180° turn
+
+
+    # --- CSV setup for predictions ---
+    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+    data_dir = cpts_dir.parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    predictions_csv_path = data_dir / f"predictions_{timestamp_str}.csv"
+
+    pred_f = predictions_csv_path.open("w", newline="", encoding="utf-8")
+    pred_w = csv.writer(pred_f)
+    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm", "Doors_Passed"]
+    pred_w.writerow(header)
+    pred_f.flush()
+
+    num_of_doors_passed = 0  # Used if return_home is True only
+
+    try:
+        while True:
+            dist_cm, bumpers, pose = await wall_follow_step(robot, controller, wall_side, forward, max_w, min_w, dt)
+            if dist_cm is None:
+                continue
+
+            pos = np.array((pose.x, pose.y), dtype=pose_dtype)
+            delta_dist = float(np.hypot(pos["x"] - last_pos["x"], pos["y"] - last_pos["y"]))
+
+            # --- homing control (only after we've turned around) ---
+            speed_scale = 1.0
+            if returning:
+                # distance from current position to start
+                dist_home = float(np.hypot(pos["x"] - start_xy["x"], pos["y"] - start_xy["y"]))
+
+                # Gentle decel as we approach home
+                if dist_home < DECEL_RADIUS:
+                    # scale forward speed (down to ~30% near HOME_RADIUS)
+                    speed_scale = max(0.3, min(1.0, dist_home / DECEL_RADIUS))
+
+                # if we’re “home”, stop and exit
+                if dist_home <= HOME_RADIUS:
+                    logger.info(f"[predictor] Reached home (≈{dist_home:.1f} units). Stopping.")
+                    await robot.set_wheel_speeds(STOP, STOP)
+                    await asyncio.sleep(1)
+                    break
+
+            update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
+                                dist_cm, controller, bumpers, dt, setpoint_cm, delta_dist)
+            # Create readings dictionary from history for belief calculation
+            all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history)
+            readings = {feature: value for feature, value in zip(POMDP_FEATURES, all_history)}
+            
+            b = belief_func(readings, last_belief['posterior'] if last_belief else None, {"cpts_dir": str(cpts_dir), "door_states": door_states})
+
+            distance_since_last_prediction += delta_dist
+            last_pos = pos.copy()
+
+            if distance_since_last_prediction >= 10:
+                await robot.set_wheel_speeds(0, 0)
+                await asyncio.sleep(1)
+                logger.info("\n--- PREDICTIONS ---")
+
+                # --- Initialize variables for this prediction cycle ---
+                predicted_location = "N/A"
+                p_ago = 0.0
+                expected_cm = 0.0
+
+                # Location prediction
+                posterior = b.get("posterior", {})
+                if posterior:
+                    predicted_location = max(posterior, key=posterior.get)
+                    logger.info(f"Predicted Location: {predicted_location}")
+                    logger.info("  Location Probabilities:")
+                    for location, probability in sorted(posterior.items()):
+                        logger.info(f"    - {location}: {probability:.4f}")
+                else:
+                    logger.info("Could not calculate location belief.")
+
+                # Door passed 10cm ago prediction
+                if last_belief:
+                    p_ago = sum(last_belief["posterior"].get(s, 0.0) for s in door_states)
+                door_passed_decision = "NO"
+                if p_ago > 0.6:
+                    door_passed_decision = "YES"
+                    num_of_doors_passed += 1
+                
+                logger.info(f"Doors passed so far: {num_of_doors_passed}")
+
+                # Distance from wall prediction
+                p_distance_bins = b.get("p_distance_bins", {})
+                if p_distance_bins:
+                    expected_cm = sum((bin_idx + 0.5) * p for bin_idx, p in p_distance_bins.items())
+                    logger.info(f"\nPredicted Distance from Wall: {expected_cm:.1f} cm")
+                    logger.info("  Distance Distribution (0-12 cm):")
+                    for bin_idx, prob in sorted(p_distance_bins.items()):
+                        logger.info(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
+                else:
+                    logger.info("Could not calculate distance distribution.")
+
+                logger.info("-------------------\n")
+
+                # --- Write to CSV ---
+                pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm, num_of_doors_passed])
+                pred_f.flush()
+
+                last_belief = b
+                distance_since_last_prediction = 0
+
+                # If we are turning back to come home
+                if return_home and num_of_doors_passed == 3:
+                    # Stop robot
+                    await robot.set_wheel_speeds(STOP, STOP)
+                    await asyncio.sleep(2)
+
+                    ## Turn robot around
+                    await turn_around_create3(robot, angle_deg=180, direction="left")
+
+                    ## Swap which wall we follow
+                    wall_side = "left" if wall_side == "right" else "right"
+                    logger.info(f"[predictor] Turned 180°, now following {wall_side} wall")
+                    returning = True
+                    return_home = False
+
+            await asyncio.sleep(dt)
+
+    finally:
+        await robot.set_wheel_speeds(0, 0)
+        pred_f.close()
+        logger.info(f"\n[predictor] Predictions saved to {predictions_csv_path.resolve()}")
 
 async def turn_around_create3(robot: Create3, angle_deg: float = 180, direction: str = "left"):
     """
