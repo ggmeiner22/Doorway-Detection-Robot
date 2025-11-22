@@ -4,5 +4,6 @@ The CPTs are learned from the data you collect and are saved as individual CSV f
 
 You can download the entire set of generated CPTs and the training data as zip archives.
 
-*   [Download CPTs (Zip)](docs/data_exports/cpts.zip)
-*   [Download Data (Zip)](docs/data_exports/data.zip)
+*   [Download Standard CPTs (Zip)](docs/data_exports/cpts.zip) - For the original Naive Bayes model.
+*   [Download POMDP CPTs (Zip)](docs/data_exports/cpts_pomdp.zip) - For the sequential POMDP model (Project 2).
+*   [Download Data (Zip)](docs/data_exports/data.zip) - Raw collected sensor data.

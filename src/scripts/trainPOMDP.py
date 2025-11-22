@@ -23,7 +23,7 @@ if __name__ == "__main__":
         exit()
 
     print(f"[trainPOMDP] Learning CPTs from {len(all_rows)} total rows across {len(all_csvs)} file(s)...")
-    learn_cpts_from_rows_pomdp(all_rows, CPTS_DIR, smoothing=0.0)
+    learn_cpts_from_rows_pomdp(all_rows, CPTS_DIR, smoothing=0.1)
 
     # --- Create zip archives for website download ---
     print("[trainPOMDP] Creating zip archives for website...")

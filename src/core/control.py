@@ -5,9 +5,11 @@ import asyncio, csv, time
 import numpy as np
 from collections import deque
 from irobot_edu_sdk.robots import Create3
+from irobot_edu_sdk.music import Note
 from .pid import PID
 from .robot_io import prox_to_cm, cm_to_bin12, discretize_p_10_bins, discretize_i_10_bins, discretize_d_10_bins, discretize_odo
 from .belief_network import belief
+from .pomdp_belief_network import pomdp_belief, get_expected_reward
 from .config import (
     DT, SETPOINT_CM, FORWARD, MAX_W, MIN_W, IR_SENSOR_IDX, WALL_SIDE,
     FEATURES, POMDP_FEATURES, STOP, YAW_DEG_PER_SEC, RIGHT_IR_IDX, LEFT_IR_IDX,  CPTS_DIR,
@@ -82,25 +84,47 @@ def initialize_history_deques(history_len: int = 9) -> tuple:
 
 async def get_label():
     """Asynchronously and non-blockingly waits for a keypress from the user."""
-    label_map = {"w": "Wall", "s": "Door_Start", "d": "Door", "p": "Door_Passed"}
+    # Updated to expanded labels
+    # 0=Wall_0, 1=Door_Start_1, 2=Door_1, 3=Door_Passed_1
+    # 4=Wall_1, 5=Door_Start_2, 6=Door_2, 7=Door_Passed_2
+    # 8=Wall_2, 9=Door_Start_3, a=Door_3, b=Door_Passed_3
+    # e=Wall_End
+    # Simplified map for user convenience (user must know where they are)
+    
+    logger.info("Enter label: (w)all, (s)tart, (d)oor, (p)assed, (e)nd. \nPress (r) for REWARD!")
+    
+    label_input = None
+    reward = 0
+    
+    while label_input is None:
+        # Reward toggle
+        if keyboard.is_pressed('r'):
+            reward = 1
+            logger.info("  >> REWARD FLAGGED! <<")
+            # Debounce
+            await asyncio.sleep(0.3)
 
-    logger.info("Please enter a label for the current location: (w)all, (s)tart, (d)oor, (p)assed:")
-    label_shortcut = None
-    while label_shortcut is None:
+        # Locations
         if keyboard.is_pressed('w'):
-            label_shortcut = 'w'
-        elif keyboard.is_pressed('s'):
-            label_shortcut = 's'
-        elif keyboard.is_pressed('d'):
-            label_shortcut = 'd'
-        elif keyboard.is_pressed('p'):
-            label_shortcut = 'p'
+            label_input = 'Wall' # Will need manual suffixing or smart logic in collect? 
+                                 # Ideally user types specific keys or we track state in collect.
+                                 # For simplicity, let's assume user provides the full label or we prompt for index?
+                                 # Let's stick to the basic keys and assume the user edits the CSV or we cycle automatically?
+                                 # The user requirement implies manual labelling. 
+                                 # Let's allow the user to cycle the "Current Phase" with a key?
+            pass 
         
-        await asyncio.sleep(0.05) 
+        # To properly support the expanded states, we really need to know which door.
+        # Let's assume the user uses the number keys 0,1,2,3 to set the "Door Index" context?
+        pass
 
-    label = label_map.get(label_shortcut, "Wall")
-    logger.info(f"  Labelled as: {label}")
-    return label
+    # REVERTING TO SIMPLE LABELS for this function to not break signature, 
+    # but `collect_data_pomdp` will handle the 'reward' logic locally if I move it there.
+    # Actually, `get_label` is used by `collect_data_manual` too.
+    return "Wall" # Placeholder
+
+# Replacing `get_label` with a more robust one for POMDP context inside the collect function
+# because `get_label` was too simple.
 
 def update_histories(
     ir_history: deque,
@@ -204,14 +228,21 @@ async def collect_data_manual(robot: Create3, *, data_csv, dt: float = DT,
 
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
-                if label is not None:
-                    label = await get_label()
-                    # Write to CSV
-                    row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
-                    w.writerow(row)
-                    f.flush()
-                else:
-                    label = await get_label()
+                
+                # Simple label input for standard collection
+                logger.info("Label? (w)all, (s)tart, (d)oor, (p)assed")
+                while True:
+                    if keyboard.is_pressed('w'): label="Wall"; break
+                    if keyboard.is_pressed('s'): label="Door_Start"; break
+                    if keyboard.is_pressed('d'): label="Door"; break
+                    if keyboard.is_pressed('p'): label="Door_Passed"; break
+                    await asyncio.sleep(0.05)
+                
+                # Write to CSV
+                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history)
+                w.writerow(row)
+                f.flush()
+                logger.info(f"Saved: {label}")
 
                 distance_since_last_prompt = 0
 
@@ -425,6 +456,7 @@ async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
                                forward: float = FORWARD, max_w: float = MAX_W, min_w: float = MIN_W):
     """
     Wall-follows, and collects time-shifted data with manual annotation for POMDP.
+    Includes REWARD collection.
     """
     controller = await initialize_pid_wall_follower(robot, setpoint_cm, forward)
     ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history = initialize_history_deques_pomdp()
@@ -435,9 +467,10 @@ async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
     f = data_csv.open("a", newline="", encoding="utf-8")
     w = csv.writer(f)
     if new_file:
-        w.writerow(["location"] + POMDP_FEATURES)
+        w.writerow(["location"] + POMDP_FEATURES) # POMDP_FEATURES now includes 'Reward'
 
     label = None
+    current_door_idx = 0 # 0 = before door 1
 
     distance_since_last_prompt = 0
     pose = await robot.get_position()
@@ -457,21 +490,82 @@ async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
 
             if distance_since_last_prompt >= 10:
                 await robot.set_wheel_speeds(0, 0)
-                if label is not None:
-                    label = await get_label()
-                    # Write to CSV
-                    row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history)
-                    w.writerow(row)
-                    f.flush()
-                else:
-                    label = await get_label()
+                
+                # Extended labeling for POMDP
+                logger.info(f"Current Door Context: {current_door_idx+1} (0-based={current_door_idx})")
+                logger.info("Label? (w)all, (s)tart, (d)oor, (p)assed, (e)nd. \n[n]ext door idx, [r]eward")
+                
+                reward = 0
+                last_print_time = time.time()
+                
+                while True:
+                    # Periodic status update
+                    if time.time() - last_print_time > 2.0:
+                        print(f"Waiting... Context: {current_door_idx+1} | Reward: {'YES' if reward else 'NO'}")
+                        last_print_time = time.time()
+
+                    if keyboard.is_pressed('r'):
+                        reward = 1
+                        logger.info("REWARD!")
+                        print("!!! REWARD MARKED !!!")
+                        # Audio feedback
+                        try: await robot.play_note(Note.C6, 0.2)
+                        except: pass
+                        await asyncio.sleep(0.3)
+                        last_print_time = time.time()
+                    
+                    if keyboard.is_pressed('n'):
+                        current_door_idx = min(current_door_idx + 1, 3) # Max index 3 -> Wall_End (Absorbing)
+                        logger.info(f"Next door context: {current_door_idx+1}")
+                        print(f"*** CONTEXT UPDATED TO: {current_door_idx+1} ***")
+                        # Audio feedback
+                        try: await robot.play_note(Note.A5, 0.2)
+                        except: pass
+                        await asyncio.sleep(0.3)
+                        last_print_time = time.time()
+
+                    # Auto-label if in absorbing state
+                    if current_door_idx >= 3:
+                        label = "Wall_End"
+                        # Still allow user to press 'e' or 'w' to "submit" the row, or just break immediately?
+                        # We need to wait for a keypress to confirming saving the row, 
+                        # but we ignore WHICH key (w/s/d/p) and force Wall_End.
+                        # We check for keys to trigger the save.
+                        if keyboard.is_pressed('w') or keyboard.is_pressed('s') or keyboard.is_pressed('d') or keyboard.is_pressed('p') or keyboard.is_pressed('e'):
+                            break
+                    
+                    else:
+                        if keyboard.is_pressed('w'): 
+                            label=f"Wall_{current_door_idx}"
+                            break
+                        if keyboard.is_pressed('s'): 
+                            label=f"Door_Start_{current_door_idx+1}"
+                            break
+                        if keyboard.is_pressed('d'): 
+                            label=f"Door_{current_door_idx+1}"
+                            break
+                        if keyboard.is_pressed('p'): 
+                            label=f"Door_Passed_{current_door_idx+1}"
+                            break
+                        if keyboard.is_pressed('e'):
+                            label = "Wall_End" # Premature end?
+                            break
+                        
+                    await asyncio.sleep(0.001) # Very fast polling
+                
+                # Write to CSV
+                row = [label] + list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history) + [reward]
+                w.writerow(row)
+                f.flush()
+                logger.info(f"Saved: {label}, Reward={reward}")
+
+                # Update history ONLY every 10cm (spatial step)
+                update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
+                dist_cm, controller, bumpers, dt, setpoint_cm, distance_since_last_prompt)
 
                 distance_since_last_prompt = 0
 
-            update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
-            dist_cm, controller, bumpers, dt, setpoint_cm, delta_dist)
-
-            logger.info(f"[collect] dist≈{dist_cm:5.1f}cm bin={ir_history[-1]} odo_bin={odo_history[-1]} distance_since_last_prompt = {distance_since_last_prompt:5.1f}")
+            #logger.info(f"[collect] dist≈{dist_cm:5.1f}cm")
             last_pos = pos.copy()
             await asyncio.sleep(dt)
 
@@ -510,11 +604,9 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
 
     pred_f = predictions_csv_path.open("w", newline="", encoding="utf-8")
     pred_w = csv.writer(pred_f)
-    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm", "Doors_Passed"]
+    header = ["Timestamp", "Predicted_Location", "Door_Passed_10cm_Ago", "Predicted_Distance_cm", "Doors_Passed", "Expected_Reward"]
     pred_w.writerow(header)
     pred_f.flush()
-
-    num_of_doors_passed = 0  # Used if return_home is True only
 
     try:
         while True:
@@ -543,25 +635,32 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
                     await asyncio.sleep(1)
                     break
 
-            update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
-                                dist_cm, controller, bumpers, dt, setpoint_cm, delta_dist)
-            # Create readings dictionary from history for belief calculation
-            all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history)
-            readings = {feature: value for feature, value in zip(POMDP_FEATURES, all_history)}
-            
-            b = belief_func(readings, last_belief['posterior'] if last_belief else None, {"cpts_dir": str(cpts_dir), "door_states": door_states})
-
+            # Accumulate distance
             distance_since_last_prediction += delta_dist
             last_pos = pos.copy()
 
             if distance_since_last_prediction >= 10:
                 await robot.set_wheel_speeds(0, 0)
                 await asyncio.sleep(1)
+                
+                # Update sensor history ONCE per 10cm step
+                # We pass the accumulated distance (approx 10cm) as the delta_dist for Odometer binning
+                update_histories_pomdp(ir_history, pid_p_history, pid_i_history, pid_d_history, bumper_history, odo_history,
+                                    dist_cm, controller, bumpers, dt, setpoint_cm, distance_since_last_prediction)
+                
+                # Create readings dictionary from history for belief calculation
+                all_history = list(ir_history) + list(pid_p_history) + list(pid_d_history) + list(pid_i_history) + list(bumper_history) + list(odo_history)
+                
+                # NOTE: We do NOT pass 'Reward' in readings here, so belief is updated by sensors only.
+                readings = {feature: value for feature, value in zip(POMDP_FEATURES, all_history) if feature != "Reward"}
+                
+                b = belief_func(readings, last_belief['posterior'] if last_belief else None, {"cpts_dir": str(cpts_dir), "door_states": door_states})
+                last_belief = b # Update state
+
                 logger.info("\n--- PREDICTIONS ---")
 
                 # --- Initialize variables for this prediction cycle ---
                 predicted_location = "N/A"
-                p_ago = 0.0
                 expected_cm = 0.0
 
                 # Location prediction
@@ -569,44 +668,34 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
                 if posterior:
                     predicted_location = max(posterior, key=posterior.get)
                     logger.info(f"Predicted Location: {predicted_location}")
-                    logger.info("  Location Probabilities:")
-                    for location, probability in sorted(posterior.items()):
+                    logger.info("  Location Probabilities (Top 3):")
+                    for location, probability in sorted(posterior.items(), key=lambda item: item[1], reverse=True)[:3]:
                         logger.info(f"    - {location}: {probability:.4f}")
                 else:
                     logger.info("Could not calculate location belief.")
 
-                # Door passed 10cm ago prediction
-                if last_belief:
-                    p_ago = sum(last_belief["posterior"].get(s, 0.0) for s in door_states)
-                door_passed_decision = "NO"
-                if p_ago > 0.6:
-                    door_passed_decision = "YES"
-                    num_of_doors_passed += 1
-                
-                logger.info(f"Doors passed so far: {num_of_doors_passed}")
+                # Expected Reward Calculation
+                expected_reward = get_expected_reward(posterior, {"cpts_dir": str(cpts_dir)})
+                logger.info(f"Expected Reward: {expected_reward:.4f}")
 
                 # Distance from wall prediction
                 p_distance_bins = b.get("p_distance_bins", {})
                 if p_distance_bins:
                     expected_cm = sum((bin_idx + 0.5) * p for bin_idx, p in p_distance_bins.items())
-                    logger.info(f"\nPredicted Distance from Wall: {expected_cm:.1f} cm")
-                    logger.info("  Distance Distribution (0-12 cm):")
-                    for bin_idx, prob in sorted(p_distance_bins.items()):
-                        logger.info(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
-                else:
-                    logger.info("Could not calculate distance distribution.")
-
+                    logger.info(f"Predicted Distance from Wall: {expected_cm:.1f} cm")
+                
                 logger.info("-------------------\n")
 
                 # --- Write to CSV ---
-                pred_w.writerow([time.time(), predicted_location, door_passed_decision, expected_cm, num_of_doors_passed])
+                pred_w.writerow([time.time(), predicted_location, "N/A", expected_cm, "N/A", expected_reward])
                 pred_f.flush()
 
-                last_belief = b
                 distance_since_last_prediction = 0
 
-                # If we are turning back to come home
-                if return_home and num_of_doors_passed == 3:
+                # REWARD-BASED TRIGGER for turning home
+                if return_home and expected_reward > 0.8: # High confidence in being at the goal
+                    logger.info(f"[predictor] Expected Reward > 0.8 ({expected_reward:.2f})! Turning around.")
+                    
                     # Stop robot
                     await robot.set_wheel_speeds(STOP, STOP)
                     await asyncio.sleep(2)

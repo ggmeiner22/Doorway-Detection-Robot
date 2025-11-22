@@ -10,9 +10,11 @@ FEATURES     = [f"IR{i}" for i in range(1, 10)] + \
              [f"PIDD{i}" for i in range(1, 10)] + \
              [f"PIDI{i}" for i in range(1, 10)] + \
              [f"BI{i}" for i in range(1, 10)]
-POMDP_FEATURES = FEATURES + [f"ODO{i}" for i in range(1, 10)]
-LOCATIONS    = ["Wall","Door_Start","Door","Door_Passed"]
-DOOR_STATES  = ["Door_Passed"]
+POMDP_FEATURES = FEATURES + [f"ODO{i}" for i in range(1, 10)] + ["Reward"]
+LOCATIONS    = ["Wall_0", "Door_Start_1", "Door_1", "Door_Passed_1",
+                "Wall_1", "Door_Start_2", "Door_2", "Door_Passed_2",
+                "Wall_2", "Door_Start_3", "Door_3", "Door_Passed_3", "Wall_End"]
+DOOR_STATES  = ["Door_Passed_1", "Door_Passed_2", "Door_Passed_3"]
 
 RIGHT_IR_IDX  = 6
 LEFT_IR_IDX   = 0
