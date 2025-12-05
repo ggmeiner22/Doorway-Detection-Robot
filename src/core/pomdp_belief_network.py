@@ -36,11 +36,11 @@ def _normalize(d: Dict[str, float]) -> Dict[str, float]:
 # Wall_0 -> Door_Start_1 -> Door_1 -> Door_Passed_1 -> Wall_1 ...
 
 # Shared transition parameters
-P_WALL_STAY  = 0.6
-P_WALL_START = 0.4
+P_WALL_STAY  = 0.8
+P_WALL_START = 0.2
 P_START_DOOR = 1.0
-P_DOOR_STAY  = 0.6
-P_DOOR_PASS  = 0.4
+P_DOOR_STAY  = 0.8
+P_DOOR_PASS  = 0.2
 P_PASS_WALL  = 1.0
 
 transition_model = {
@@ -210,20 +210,16 @@ def get_expected_reward(belief_state: Dict[str, float], inner_configuration: Dic
     
     expected_r = 0.0
     for s, prob in belief_state.items():
-        # Map state to CPT label if necessary (though Reward might be trained on specific states if we use specific labels in collection)
-        # Ideally Reward is trained on the specific states we are in.
-        # If we use "Wall_End" as a label in collection, and "Wall_End" in config, then no mapping needed for 'Reward' CPT lookup?
-        # Wait, 'learn_cpts' uses the LOCATIONS from config.
-        # So cpt_Reward.csv will have columns 'Wall_0', 'Door_1', etc.
-        # So NO MAPPING needed for Reward CPT if we consistently use the new locations.
-        # But wait, my 'get_cpt_label' mapping was for the sensor CPTs which are old/generic.
-        # 'Reward' CPT will be new and specific.
+        # Use generic label mapping if specific key is not found
+        cpt_label = get_cpt_label(s)
         
-        # However, if we are using existing data + new reward data...
-        # The user said "include a reward... take some training".
-        # So we assume we will collect new data for this.
-        
-        p_reward_1 = table.get(s, {}).get(1, 0.0)
+        if s in table:
+            p_reward_1 = table.get(s, {}).get(1, 0.0)
+        elif cpt_label in table:
+            p_reward_1 = table.get(cpt_label, {}).get(1, 0.0)
+        else:
+            p_reward_1 = 0.0
+            
         expected_r += prob * p_reward_1
         
     return expected_r
