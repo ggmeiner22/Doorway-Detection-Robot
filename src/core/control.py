@@ -640,8 +640,9 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
             last_pos = pos.copy()
 
             if distance_since_last_prediction >= 10:
-                await robot.set_wheel_speeds(0, 0)
-                await asyncio.sleep(1)
+                if not returning:
+                    await robot.set_wheel_speeds(0, 0)
+                    await asyncio.sleep(1)
                 
                 # Update sensor history ONCE per 10cm step
                 # We pass the accumulated distance (approx 10cm) as the delta_dist for Odometer binning
