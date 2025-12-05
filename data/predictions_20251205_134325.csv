@@ -1,0 +1,3 @@
+Timestamp,Predicted_Location,Door_Passed_10cm_Ago,Predicted_Distance_cm,Doors_Passed,Expected_Reward
+1764960208.255679,Wall_0,N/A,0.0,N/A,0.0
+1764960211.263156,Wall_0,N/A,0.0,N/A,0.0
