@@ -1,11 +1,35 @@
-The core of this project is a Bayesian Network, a powerful probabilistic model for reasoning under uncertainty. In robotics, Bayesian Networks are ideal for **sensor fusion**—the process of combining data from multiple, often noisy, sensors to arrive at a more accurate and reliable understanding of the world.
+### Perception and Inference
+The robot constructs a belief about its location using a **Partially Observable Markov Decision Process (POMDP)** framework. Continuous sensor data—including IR readings and the PID controller's own internal state—is discretized and fed into a Bayesian filter. This filter updates the probability of the robot being in specific states (e.g., "Wall", "Door", "Door Passed") based on a learned observation model and a transition model that enforces forward progression.
 
-Our network is designed to infer the robot's unobserved **Location** (e.g., `Wall`, `Door`) by observing evidence from its sensors over time. Here's how it works:
+### POMDP Formulation
+We formalize the navigation task as a POMDP defined by the tuple $(S, A, T, \Omega, O, R)$. The robot cannot directly observe its true state $s_t \in S$ but maintains a belief distribution $b_t(s) = P(s_t = s \mid z_{1:t}, a_{1:t})$.
 
-*   **Nodes are Variables:** The "parent" node in our network represents the `Location`, which is the hidden state we want to find. "Child" nodes represent our 45 evidence variables (the historical sensor readings from the IR, PID controller, and bumpers).
+#### Topological State Space and Parameter Tying
+The hallway is modeled as a directed acyclic graph (DAG) representing the linear sequence of "Macro-States" (Wall, Door 1, Wall, Door 2, etc.).
+The global state space $S$ consists of specific localized states:
+`S = { Wall_0, Start_1, Door_1, Passed_1, Wall_1, ..., Wall_End }`
 
-*   **Edges are Dependencies:** The structure of the network defines the dependencies. We use a Naive Bayes structure, which assumes that each piece of sensor evidence is conditionally independent of the others, given the robot's location. This is a common and effective simplification for this type of problem.
+To avoid overfitting, we employ **Parameter Tying**. All states of a similar semantic class share the same Conditional Probability Tables (CPTs). We define a mapping $M: S \to S_{generic}$ where $S_{generic} = \{ Wall, DoorStart, Door, DoorPassed, WallEnd \}$.
 
-*   **Probabilities are Key:** Each node has a Conditional Probability Table (CPT) that stores the probability of observing a certain value given its dependencies (if there are any). These CPTs are learned from the data we collected.
+#### Transition Dynamics
+The transition model $T(s' \mid s)$ encodes the topology of the environment:
+*   **Persistent States (Wall, Door):** Modeled with a self-transition probability ($P_{stay} = 0.8$) and a progression probability ($P_{next} = 0.2$). This models the variable length of walls and door openings.
+*   **Transient States (DoorStart, DoorPassed):** Modeled with deterministic transitions ($P_{next} = 1.0$) to the subsequent state.
 
-As the robot moves, it gathers new sensor readings. The Bayesian Network then performs **inference**, updating its belief in the probability of each possible `Location` by combining the prior belief with the new evidence using the CPTs. This allows the robot to weigh all the evidence and make an informed decision about its state, even with imperfect sensor data.
+This structure enforces a strict sequential progression: the robot cannot skip a door or move backward, constraining the inference search space significantly.
+
+### Observation Model
+The observation probability $P(z_t \mid s)$ is computed using a **Naive Bayes** assumption to handle the high dimensionality of the feature vector $z_t$.
+The underlying CPTs $P(f_i \mid c)$ for each generic class are learned from labeled training data via Maximum Likelihood Estimation with Laplace smoothing ($\alpha=1$). 
+
+The belief update is performed recursively via the discrete Bayes filter:
+$b_t(s') = \eta \, P(z_t \mid M(s')) \sum_{s \in S} T(s' \mid s) b_{t-1}(s)$
+where $\eta$ is the normalization constant.
+
+### Decision Policy (Expected Reward)
+The ultimate goal is to execute a discrete high-level action: turning around after passing 3 doors.
+Rather than relying on the most likely state (MAP estimate), we utilize an **Expected Reward** policy.
+We augment the feature space with a latent "Reward" variable. During training, the `Wall_End` state is associated with a high probability of $Reward=1$, while all other states have $Reward=0$.
+At runtime, we compute the expected reward $\mathbb{E}[R_t]$:
+$\mathbb{E}[R_t] = \sum_{s \in S} b_t(s) \cdot P(Reward=1 \mid M(s))$
+When this metric exceeds a threshold ($\tau = 0.8$), the robot executes the return-home maneuver.
