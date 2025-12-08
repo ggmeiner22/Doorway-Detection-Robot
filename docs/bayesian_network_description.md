@@ -32,4 +32,4 @@ Rather than relying on the most likely state (MAP estimate), we utilize an **Exp
 We augment the feature space with a latent "Reward" variable. During training, the `Wall_End` state is associated with a high probability of `Reward=1`, while all other states have `Reward=0`.
 At runtime, we compute the expected reward `E[R_t]`:
 `E[R_t] = sum_{s in S} b_t(s) * P(Reward=1 | M(s))`
-When this metric exceeds a threshold (`tau = 0.8`), the robot executes the return-home maneuver.
+When this metric exceeds a threshold of `0.8`, the robot executes the return-home maneuver.
