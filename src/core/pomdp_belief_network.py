@@ -110,22 +110,9 @@ def pomdp_belief(readings: Dict[str, int], last_belief: Dict[str, float], inner_
         locs, values, table = _load_cpt(cpts_dir, feat)
         
         # GENERALIZATION: Use generic labels for observation lookup.
-        # The CPTs in 'cpts/' must have columns like 'Wall', 'Door', etc.
-        # If you trained with specific labels, you need to retrain or ensure 
-        # your training aggregates them.
-        # Assuming the user will re-train such that CPTs have generic columns 
-        # OR we map current specific columns to generic buckets if we can?
-        
-        # Actually, the user asked to "generalize transitions".
-        # If we want to use data efficiently, we should TRAIN generic CPTs 
-        # but RUN with specific states.
-        
-        # If the CPTs currently have specific columns (Wall_0, Door_1...), 
-        # we can't just look up "Door" because it doesn't exist in the table.
-        # But if we re-train to produce generic CPTs, then we MUST look up "Door".
         
         for loc in post:
-            # If we are using GENERIC CPTs (trained on aggregated data):
+            # (trained on aggregated data)
             cpt_label = get_cpt_label(loc) 
             
             # Safety: if specific key exists, use it. If not, try generic.
@@ -168,8 +155,7 @@ def pomdp_belief(readings: Dict[str, int], last_belief: Dict[str, float], inner_
     support = bins1 or bins5
     p_bin = {b: 0.0 for b in support}
     for b in support:
-        # Use mapping here too if needed, though distance bins are usually just Wall/Door agnostic
-        # But the original code weighted them by 'loc' probability.
+        # Use mapping here too if needed
         like1 = 0.0
         if bins1:
             for loc in post:

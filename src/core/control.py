@@ -106,25 +106,11 @@ async def get_label():
 
         # Locations
         if keyboard.is_pressed('w'):
-            label_input = 'Wall' # Will need manual suffixing or smart logic in collect? 
-                                 # Ideally user types specific keys or we track state in collect.
-                                 # For simplicity, let's assume user provides the full label or we prompt for index?
-                                 # Let's stick to the basic keys and assume the user edits the CSV or we cycle automatically?
-                                 # The user requirement implies manual labelling. 
-                                 # Let's allow the user to cycle the "Current Phase" with a key?
+            label_input = 'Wall'
             pass 
-        
-        # To properly support the expanded states, we really need to know which door.
-        # Let's assume the user uses the number keys 0,1,2,3 to set the "Door Index" context?
         pass
-
-    # REVERTING TO SIMPLE LABELS for this function to not break signature, 
-    # but `collect_data_pomdp` will handle the 'reward' logic locally if I move it there.
-    # Actually, `get_label` is used by `collect_data_manual` too.
     return "Wall" # Placeholder
 
-# Replacing `get_label` with a more robust one for POMDP context inside the collect function
-# because `get_label` was too simple.
 
 def update_histories(
     ir_history: deque,
@@ -467,7 +453,7 @@ async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
     f = data_csv.open("a", newline="", encoding="utf-8")
     w = csv.writer(f)
     if new_file:
-        w.writerow(["location"] + POMDP_FEATURES) # POMDP_FEATURES now includes 'Reward'
+        w.writerow(["location"] + POMDP_FEATURES)
 
     label = None
     current_door_idx = 0 # 0 = before door 1
@@ -527,10 +513,6 @@ async def collect_data_pomdp(robot: Create3, *, data_csv, dt: float = DT,
                     # Auto-label if in absorbing state
                     if current_door_idx >= 3:
                         label = "Wall_End"
-                        # Still allow user to press 'e' or 'w' to "submit" the row, or just break immediately?
-                        # We need to wait for a keypress to confirming saving the row, 
-                        # but we ignore WHICH key (w/s/d/p) and force Wall_End.
-                        # We check for keys to trigger the save.
                         if keyboard.is_pressed('w') or keyboard.is_pressed('s') or keyboard.is_pressed('d') or keyboard.is_pressed('p') or keyboard.is_pressed('e'):
                             break
                     
