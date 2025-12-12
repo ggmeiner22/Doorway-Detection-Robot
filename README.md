@@ -139,7 +139,7 @@ python -m src.scripts.train
 **3) Run** (online fusion + PID):
 
 ```bash
-python -m src.scripts.run
+python -m src.scripts.runPOMDP
 ```
 - You’ll see plots and a timeseries CSV suitable for spreadsheets.
 > On subsequent runs, you can **skip collection/training** and reuse existing CPTs in *cpts/*.
