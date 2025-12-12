@@ -651,8 +651,8 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
                 if posterior:
                     predicted_location = max(posterior, key=posterior.get)
                     logger.info(f"Predicted Location: {predicted_location}")
-                    logger.info("  Location Probabilities (Top 3):")
-                    for location, probability in sorted(posterior.items(), key=lambda item: item[1], reverse=True)[:3]:
+                    logger.info("  Location Probabilities (ALL):")
+                    for location, probability in sorted(posterior.items(), key=lambda item: item[1], reverse=True):
                         logger.info(f"    - {location}: {probability:.4f}")
                 else:
                     logger.info("Could not calculate location belief.")
@@ -666,7 +666,11 @@ async def run_location_predictor_pomdp(robot: Create3, *, cpts_dir, door_states,
                 if p_distance_bins:
                     expected_cm = sum((bin_idx + 0.5) * p for bin_idx, p in p_distance_bins.items())
                     logger.info(f"Predicted Distance from Wall: {expected_cm:.1f} cm")
-                
+                    logger.info("  Distance Distribution (0–12 cm):")
+                    for bin_idx, prob in sorted(p_distance_bins.items()):
+                        logger.info(f"    - {bin_idx}-{bin_idx + 1} cm: {prob:.4f}")
+                else:
+                    logger.info("No distance distribution available.")
                 logger.info("-------------------\n")
 
                 # --- Write to CSV ---
